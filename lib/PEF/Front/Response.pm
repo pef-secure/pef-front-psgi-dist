@@ -120,6 +120,7 @@ sub redirect {
 		$status ||= 302;
 		$self->set_header(Location => $url);
 		$self->status($status);
+		$self->remove_header('Content-Type');
 	}
 }
 

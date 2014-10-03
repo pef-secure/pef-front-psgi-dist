@@ -28,8 +28,8 @@ sub build_validator {
 	my $rules         = $_[0];
 	my $method_rules  = $rules->{params} || {};
 	my $params_rule   = $rules->{extra_params} || 'ignore';
-	my %known_params  = ('method' => undef);
-	my %must_params   = ('method' => undef);
+	my %known_params  = (method => undef, ip => undef);
+	my %must_params   = (method => undef);
 	my $validator_sub = "sub { \n";
 	my $jsn           = '$_[0]->';
 	my $def           = '$_[1]->';
@@ -245,6 +245,7 @@ sub validate {
 			  or not defined $cache{$method}{code};
 		} else {
 			$new_rules->{method} = $method;
+			$new_rules->{params}{ip} = {value => 'defaults.ip'};
 			my $validator_sub = build_validator($new_rules);
 			eval "\$cache{\$method}{code} = $validator_sub";
 			croak {

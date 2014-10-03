@@ -66,7 +66,7 @@ sub ajax {
 		ip     => $request->remote_ip,
 		lang   => $lang,
 		domain => $request->hostname,
-		url    => $request->path,
+		path   => $request->path,
 		form   => $form,
 		cookie => $cookie,
 		(exists($cookie->{auth})     ? (auth     => $cookie->{auth})     : ()),
@@ -107,7 +107,7 @@ sub ajax {
 			$log->({level => "debug", message => "model: $model"});
 			if (index($model, "::") >= 0) {
 				my $class = substr($model, 0, rindex($model, "::"));
-				eval "use $class;\n\$response = $model(\$vreq)";
+				eval "use $class;\n\$response = $model(\$vreq, \$defaults)";
 			} else {
 				$response = model_rpc($model)->send_message($vreq)->recv_message;
 			}
@@ -183,18 +183,13 @@ sub ajax {
 							if (ref($result->{$rc}) eq 'ARRAY') {
 								$find_redir->($result->{$rc});
 							} else {
-								$find_redir->($result->{$rc}->{redirect}) if exists($result->{$rc}->{redirect});
-								if (exists $result->{$rc}->{'filter'}) {
-									my $class = $result->{$rc}->{'filter'};
-									my $func  = "process";
-									my $clf   = $class;
-									if ($class =~ /^(.*)::([^:])+$/) {
-										$class = $1;
-										$func  = $2;
-										$clf =~ s{::}{/}g;
-									}
+								$find_redir->($result->{$rc}{redirect}) if exists($result->{$rc}{redirect});
+								if (exists $result->{$rc}{filter}) {
+									my $class = substr($result->{$rc}{filter}, 0, rindex($result->{$rc}{filter}, "::"));
+									my $func = substr($result->{$rc}{filter}, rindex($result->{$rc}{filter}, "::") + 2);
+									(my $clf = $class) =~ s|::|/|g;
 									my $mrf      = out_filter_dir . "/$clf.pm";
-									my $response = eval {
+									my $filter_response = eval {
 										no strict 'refs';
 										require $mrf;
 										my $fr = app_namespace . $class . "::$func";
@@ -202,20 +197,17 @@ sub ajax {
 										  if not defined &{$fr};
 										return $fr->($response, $defaults);
 									};
-									if (exists($response->{redirect})) {
-										$new_loc = $response->{redirect};
-									}
 								}
-								if (exists $result->{$rc}->{'answer'}) {
-									if (substr($result->{$rc}->{'answer'}, 0, 3) eq 'TT ') {
-										my $exp = substr($result->{$rc}->{'answer'}, 3);
+								if (exists $result->{$rc}{answer}) {
+									if (substr($result->{$rc}{answer}, 0, 3) eq 'TT ') {
+										my $exp = substr($result->{$rc}{'answer'}, 3);
 										my $tmpl = encode_utf8 '[% ' . $exp . ' %]';
 										my $out;
 										$response->{answer} = $out if $tt->process_simple(\$tmpl, $stash, \$out);
 									}
 								}
-								if (exists $result->{$rc}->{'set-cookie'}) {
-									my $cl = $result->{$rc}->{'set-cookie'};
+								if (exists $result->{$rc}{'set-cookie'}) {
+									my $cl = $result->{$rc}{'set-cookie'};
 									for my $cn (keys %$cl) {
 										my $cv = $cl->{$cn};
 										my ($value);
@@ -271,9 +263,9 @@ sub ajax {
 										}
 									}
 								}
-								if (exists $result->{$rc}->{'unset-cookie'}) {
+								if (exists $result->{$rc}{'unset-cookie'}) {
 									$http_response->set_cookie(
-										$result->{$rc}->{'unset-cookie'},
+										$result->{$rc}{'unset-cookie'},
 										{   value   => '',
 											expires => -3600
 										}
@@ -299,7 +291,7 @@ sub ajax {
 	}
   out:
 	if ($json) {
-		if (exists $response->{answer}) {
+		if (exists $response->{answer} and not exists $response->{answer_no_nls}) {
 			my $args = exists($response->{answer_args}) ? $response->{answer_args} : [];
 			$args ||= [];
 			$response->{answer} = msg_get($lang, $response->{answer}, @$args)->{message};
@@ -308,6 +300,45 @@ sub ajax {
 		$http_response->set_body(encode_json($response));
 		return $http_response->response();
 	} else {
+		if (exists $response->{answer_headers} and 'ARRAY' eq ref $response->{answer_headers}) {
+			while (@{$response->{answer_headers}}) {
+				if (ref($response->{answer_headers}[0])) {
+					if (ref($response->{answer_headers}[0]) eq 'HASH') {
+						$http_response->add_header(%{$response->{answer_headers}[0]});
+					} else {
+						$http_response->add_header(@{$response->{answer_headers}[0]});
+					}
+					shift @{$response->{answer_headers}};
+				} else {
+					$http_response->add_header($response->{answer_headers}[0], $response->{answer_headers}[1]);
+					splice @{$response->{answer_headers}}, 0, 2;
+				}
+			}
+		}
+		if (exists $response->{answer_cookies} and 'ARRAY' eq ref $response->{answer_cookies}) {
+			while (@{$response->{answer_cookies}}) {
+				if (ref($response->{answer_cookies}[0])) {
+					if (ref($response->{answer_cookies}[0]) eq 'HASH') {
+						$http_response->set_cookie(%{$response->{answer_cookies}[0]});
+					} else {
+						$http_response->set_cookie(@{$response->{answer_cookies}[0]});
+					}
+					shift @{$response->{answer_cookies}};
+				} else {
+					$http_response->set_cookie($response->{answer_headers}[0], $response->{answer_headers}[1]);
+					splice @{$response->{answer_cookies}}, 0, 2;
+				}
+			}
+		}
+		if (exists $response->{answer_status} and $response->{answer_status} > 100) {
+			$http_response->status($response->{answer_status});
+			if (   $response->{answer_status} > 300
+				&& $response->{answer_status} < 400
+				&& (my $loc = $http_response->get_header('Location')))
+			{
+				$new_loc = $loc;
+			}
+		}
 		if (!defined($new_loc) || $new_loc eq '') {
 			$log->({level => "debug", message => "outputting the answer"});
 			if (   exists($response->{answer_content_type})

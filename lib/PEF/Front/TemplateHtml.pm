@@ -67,6 +67,7 @@ sub handler {
 		ip        => $request->remote_ip,
 		lang      => $lang,
 		domain    => $request->hostname,
+		path      => $request->path,
 		form      => $form,
 		cookie    => $cookie,
 		template  => $template,

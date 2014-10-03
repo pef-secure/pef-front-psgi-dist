@@ -63,6 +63,7 @@ sub import {
 		no_multilang_support
 		location_error
 		template_cache
+		no_nls
 		}
 	  )
 	{
@@ -79,6 +80,7 @@ sub import {
 	}
 }
 
+sub std_no_nls               {0}
 sub std_model_rpc_admin_port {5500}
 sub std_model_rpc_site_port  {4500}
 sub std_model_rpc_admin_addr {'172.16.0.1'}
