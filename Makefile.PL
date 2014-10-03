@@ -1,0 +1,52 @@
+use ExtUtils::MakeMaker;
+
+WriteMakefile(
+	NAME        => "PEF::Front",
+	AUTHOR      => "Pef Secure",
+	VERSION     => "0.01",
+	INSTALLDIRS => 'site',
+	PREREQ_PM   => {
+		'DBIx::Connector'       => "0.53",
+		'Exporter'              => 1,
+		'Cache::FastMmap'       => 1,
+		'Carp'                  => 1,
+		'Data::Dumper'          => 1,
+		'Digest::MD5'           => 1,
+		'Encode'                => 1,
+		'Errno'                 => 1,
+		'Fcntl'                 => 1,
+		'File::Basename'        => 1,
+		'FindBin'               => 1,
+		'GDBM_File'             => 1,
+		'GD::SecurityImage'     => 1,
+		'Geo::IPfree'           => 1,
+		'HTTP::Headers'         => 1,
+		'IO::Socket'            => 1,
+		'JSON'                  => 1,
+		'MLDBM'                 => 1,
+		'MLDBM::Sync'           => "0.30",
+		'POSIX'                 => 1,
+		'Regexp::Common'        => 1,
+		'Socket'                => 1,
+		'Storable'              => 1,
+		'strict'                => 1,
+		'Template::Alloy'       => 1,
+		'Time::Duration::Parse' => "0.06",
+		'Time::HiRes'           => 1,
+		'URI::Escape'           => 1,
+		'utf8'                  => 1,
+		'warnings'              => 1,
+		'YAML::XS'              => "0.41",
+	},
+
+	dist => {
+		DIST_DEFAULT => 'all tardist',
+		COMPRESS     => 'gzip -vf',
+		SUFFIX       => '.gz',
+	},
+
+	clean => {FILES => '*~',},
+
+	realclean => {FILES => '*~',},
+);
+
