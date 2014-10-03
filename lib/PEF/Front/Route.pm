@@ -14,9 +14,9 @@ my $nurlpos = 1;
 my $flagpos = 2;
 my $tranpos = 3;
 
-sub import {
-	return if @rewrite;
-	my ($class, @params) = @_;
+sub add_route {
+	my @params = @_;
+	shift @params if @params & 1;
 	for (my $i = 0; $i < @params; $i += 2) {
 		my ($rule, $rdest) = @params[$i, $i + 1];
 		push @rewrite, [$rule, undef, {}, undef];
@@ -35,8 +35,8 @@ sub import {
 		}
 		if (ref($rule) eq 'Regexp') {
 			if (!ref($rewrite[$ri][$nurlpos])) {
-				$rewrite[$ri][$tranpos] = eval
-				    "sub {my \$request = \$_[0]; my \$url = \$request->path; return \$url if \$url =~ s\"$rule\""
+				$rewrite[$ri][$tranpos] =
+				    eval "sub {my \$request = \$_[0]; my \$url = \$request->path; return \$url if \$url =~ s\"$rule\""
 				  . $rewrite[$ri][$nurlpos] . "\""
 				  . (exists($rewrite[$ri][$flagpos]{re}) ? $rewrite[$ri][$flagpos]{re} : "")
 				  . "; return }";
@@ -83,6 +83,12 @@ sub import {
 	}
 }
 
+sub import {
+	return if @rewrite;
+	my ($class, @params) = @_;
+	add_route(@params);
+}
+
 sub rewrite {
 	my $request = $_[0];
 	my $env     = $request->env;
@@ -119,7 +125,7 @@ sub to_app {
 			my $lang = guess_lang($request);
 			if ($request->method eq 'GET') {
 				my $http_response = PEF::Front::Response->new();
-				$http_response->redirect(301, "/$lang" . $request->request_uri);
+				$http_response->redirect("/$lang" . $request->request_uri, 301);
 				return $http_response->response();
 			} else {
 				my $env = $request->env;
