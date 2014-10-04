@@ -245,7 +245,6 @@ sub validate {
 			  or not defined $cache{$method}{code};
 		} else {
 			$new_rules->{method} = $method;
-			$new_rules->{params}{ip} = {value => 'defaults.ip'};
 			my $validator_sub = build_validator($new_rules);
 			eval "\$cache{\$method}{code} = $validator_sub";
 			croak {
