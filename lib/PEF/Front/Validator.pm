@@ -207,7 +207,7 @@ sub validate {
 		my $raw_rules;
 		read($fi, $raw_rules, -s $fi);
 		close $fi;
-		my $new_rules = eval {Load $raw_rules};
+		my @new_rules = eval {Load $raw_rules};
 		if ($@) {
 			cluck $@;
 			croak {
@@ -216,6 +216,7 @@ sub validate {
 				answer_args => ["$@"]
 			};
 		} else {
+			my $new_rules = $new_rules[0];
 			$cache{'-base-'}{rules} = $new_rules;
 			my $param_rules = $new_rules->{params} || {};
 			for my $pr (keys %$param_rules) {
@@ -233,7 +234,7 @@ sub validate {
 		my $raw_rules;
 		read($fi, $raw_rules, -s $fi);
 		close $fi;
-		my $new_rules = eval {Load $raw_rules};
+		my @new_rules = eval {Load $raw_rules};
 		if ($@) {
 			cluck $@;
 			croak {
@@ -244,6 +245,7 @@ sub validate {
 			  if not exists $cache{$method}{code}
 			  or not defined $cache{$method}{code};
 		} else {
+			my $new_rules = $new_rules[0];
 			$new_rules->{method} = $method;
 			my $validator_sub = build_validator($new_rules);
 			eval "\$cache{\$method}{code} = $validator_sub";
