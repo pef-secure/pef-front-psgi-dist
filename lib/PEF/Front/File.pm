@@ -24,17 +24,17 @@ sub new {
 		size         => (delete $args{size}) || -1,
 		filename     => $fname,
 	}, $class;
-	if (exists($args{id}) && $args{id} ne '' && $args{id} !~ m|/|) {
+	if (exists ($args{id}) && $args{id} ne '') {
 		$self->{id} = $args{id};
-		set_cache("upload:$self->{id}/$fname", "0:$self->{size}");
+		set_cache("upload:$self->{id}", "0:$self->{size}");
 	}
 	$self;
 }
 
-sub filename     {$_[0]->{filename}}
-sub size         {$_[0]->{size}}
-sub content_type {$_[0]->{content_type}}
-sub upload_path  {$_[0]->{upload_path}}
+sub filename     { $_[0]->{filename} }
+sub size         { $_[0]->{size} }
+sub content_type { $_[0]->{content_type} }
+sub upload_path  { $_[0]->{upload_path} }
 
 sub append {
 	my $self = $_[0];
@@ -44,18 +44,18 @@ sub append {
 		binmode $fh;
 		$self->{fh} = $fh;
 	}
-	syswrite($self->{fh}, $_[1]);
+	syswrite ($self->{fh}, $_[1]);
 	if (exists $self->{id}) {
-		my $size = sysseek($_[0], 0, 1);
-		set_cache("upload:$self->{id}/$self->{filename}", "$size:$self->{size}");
+		my $size = sysseek ($_[0], 0, 1);
+		set_cache("upload:$self->{id}", "$size:$self->{size}");
 	}
 }
 
 sub finish {
 	my $self = $_[0];
 	if (exists $self->{id}) {
-		my $size = sysseek($_[0], 0, 2);
-		set_cache("upload:$self->{id}/$self->{filename}", "$size:$size");
+		my $size = sysseek ($_[0], 0, 2);
+		set_cache("upload:$self->{id}", "$size:$size");
 		$_[0]->{size} = $size;
 	}
 }
@@ -63,8 +63,8 @@ sub finish {
 sub value {
 	my $self = $_[0];
 	return '' if not exists $self->{fh};
-	sysseek($self->{fh}, 0, 0);
-	sysread($self->{fh}, my $ret, -s $self->{fh});
+	sysseek ($self->{fh}, 0, 0);
+	sysread ($self->{fh}, my $ret, -s $self->{fh});
 	return $ret;
 }
 
@@ -76,10 +76,10 @@ sub fh {
 
 sub DESTROY {
 	my $self = $_[0];
-	close($self->{fh}) if exists $self->{fh};
+	close ($self->{fh}) if exists $self->{fh};
 	$self->{fh} = undef;
 	if (exists $self->{id}) {
-		remove_cache_key("upload:$self->{id}/$self->{filename}");
+		remove_cache_key("upload:$self->{id}");
 	}
 	unlink "$self->{upload_path}/$self->{filename}" if -e "$self->{upload_path}/$self->{filename}";
 }
