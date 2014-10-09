@@ -68,6 +68,7 @@ sub ajax {
 		domain    => $request->hostname,
 		path_info => $request->path,
 		form      => $form,
+		headers   => $request->headers,
 		cookie    => $cookie,
 		(exists ($cookie->{auth})     ? (auth     => $cookie->{auth})     : ()),
 		(exists ($cookie->{auth_adm}) ? (auth_adm => $cookie->{auth_adm}) : ()),
@@ -186,91 +187,91 @@ sub ajax {
 							} else {
 								$find_redir->($result->{$rc}{redirect}) if exists ($result->{$rc}{redirect});
 								if (exists $result->{$rc}{filter}) {
-	my $class = substr ($result->{$rc}{filter}, 0, rindex ($result->{$rc}{filter}, "::"));
-	my $func = substr ($result->{$rc}{filter}, rindex ($result->{$rc}{filter}, "::") + 2);
-	(my $clf = $class) =~ s|::|/|g;
-	my $mrf             = out_filter_dir . "/$clf.pm";
-	my $filter_response = eval {
-		no strict 'refs';
-		require $mrf;
-		my $fr = app_namespace . $class . "::$func";
-		return {result => 'INTERR', answer => 'Bad output filter', answer_args => []}
-		  if not defined &{$fr};
-		return $fr->($response, $defaults);
-	};
+									my $class = substr ($result->{$rc}{filter}, 0, rindex ($result->{$rc}{filter}, "::"));
+									my $func = substr ($result->{$rc}{filter}, rindex ($result->{$rc}{filter}, "::") + 2);
+									(my $clf = $class) =~ s|::|/|g;
+									my $mrf             = out_filter_dir . "/$clf.pm";
+									my $filter_response = eval {
+										no strict 'refs';
+										require $mrf;
+										my $fr = app_namespace . $class . "::$func";
+										return {result => 'INTERR', answer => 'Bad output filter', answer_args => []}
+										  if not defined &{$fr};
+										return $fr->($response, $defaults);
+									};
 								}
 								if (exists $result->{$rc}{answer}) {
-	if (substr ($result->{$rc}{answer}, 0, 3) eq 'TT ') {
-		my $exp = substr ($result->{$rc}{'answer'}, 3);
-		my $tmpl = encode_utf8 '[% ' . $exp . ' %]';
-		my $out;
-		$response->{answer} = $out if $tt->process_simple(\$tmpl, $stash, \$out);
-	}
+									if (substr ($result->{$rc}{answer}, 0, 3) eq 'TT ') {
+										my $exp = substr ($result->{$rc}{'answer'}, 3);
+										my $tmpl = encode_utf8 '[% ' . $exp . ' %]';
+										my $out;
+										$response->{answer} = $out if $tt->process_simple(\$tmpl, $stash, \$out);
+									}
 								}
 								if (exists $result->{$rc}{'set-cookie'}) {
-	my $cl = $result->{$rc}{'set-cookie'};
-	for my $cn (keys %$cl) {
-		my $cv = $cl->{$cn};
-		my ($value);
-		my %other_params;
-		if (ref ($cv)) {
-			if (exists $cv->{value}) {
-				$value = $cv->{value};
-			} else {
-				$log->({
-						level   => "debug",
-						message => "error processing set cookie $cn: undefined value"
-					}
-				);
-				$value = '';
-			}
-			for my $pn (qw/expires domain path secure max-age httponly/) {
-				if (exists $cv->{$pn}) {
-					$other_params{$pn} = $cv->{$pn};
-				}
-			}
-		} else {
-			$value = $cv;
-		}
-		$other_params{path} = "/" if not exists $other_params{path};
-		if (substr ($value, 0, 3) eq 'TT ') {
-			my $exp = substr ($value, 3);
-			my $tmpl = encode_utf8 '[% ' . $exp . ' %]';
-			my $out;
-			$tt->process(\$tmpl, $stash, \$out) and do {
-				$http_response->set_cookie(
-					$cn, {
-						value => $out,
-						%other_params
-					}
-				);
-				1;
-			  }
-			  or do {
-				$log->({
-						level   => "debug",
-						message => "error processing set cookie $cn: " . $tt->error() . ": " . Dumper($tmpl, $stash)
-					}
-				);
-			  };
-		} else {
-			$http_response->set_cookie(
-				$cn, {
-					value => $value,
-					%other_params
-				}
-			);
+									my $cl = $result->{$rc}{'set-cookie'};
+									for my $cn (keys %$cl) {
+										my $cv = $cl->{$cn};
+										my ($value);
+										my %other_params;
+										if (ref ($cv)) {
+											if (exists $cv->{value}) {
+												$value = $cv->{value};
+											} else {
+												$log->({
+														level   => "debug",
+														message => "error processing set cookie $cn: undefined value"
+													}
+												);
+												$value = '';
+											}
+											for my $pn (qw/expires domain path secure max-age httponly/) {
+												if (exists $cv->{$pn}) {
+													$other_params{$pn} = $cv->{$pn};
+												}
+											}
+										} else {
+											$value = $cv;
+										}
+										$other_params{path} = "/" if not exists $other_params{path};
+										if (substr ($value, 0, 3) eq 'TT ') {
+											my $exp = substr ($value, 3);
+											my $tmpl = encode_utf8 '[% ' . $exp . ' %]';
+											my $out;
+											$tt->process(\$tmpl, $stash, \$out) and do {
+												$http_response->set_cookie(
+													$cn, {
+														value => $out,
+														%other_params
+													}
+												);
+												1;
+											  }
+											  or do {
+												$log->({
+														level   => "debug",
+														message => "error processing set cookie $cn: " . $tt->error() . ": " . Dumper($tmpl, $stash)
+													}
+												);
+											  };
+										} else {
+											$http_response->set_cookie(
+												$cn, {
+													value => $value,
+													%other_params
+												}
+											);
 
-		}
-	}
+										}
+									}
 								}
 								if (exists $result->{$rc}{'unset-cookie'}) {
-	$http_response->set_cookie(
-		$result->{$rc}{'unset-cookie'}, {
-			value   => '',
-			expires => -3600
-		}
-	);
+									$http_response->set_cookie(
+										$result->{$rc}{'unset-cookie'}, {
+											value   => '',
+											expires => -3600
+										}
+									);
 								}
 							}
 						} else {

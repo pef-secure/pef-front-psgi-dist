@@ -70,6 +70,7 @@ sub handler {
 		path_info => $request->path,
 		form      => $form,
 		cookie    => $cookie,
+		headers   => $request->headers,
 		template  => $template,
 		time      => time,
 		gmtime    => [gmtime],
@@ -180,6 +181,12 @@ sub handler {
 		response_content_type => sub {
 			$http_response->content_type($_[0]);
 			return;
+		}
+	);
+	$tt->define_vmethod(
+		'text',
+		request_get_header => sub {
+			return $request->headers->get_header($_[0]);
 		}
 	);
 	$tt->define_vmethod(
