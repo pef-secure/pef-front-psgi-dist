@@ -65,10 +65,11 @@ sub ajax {
 	my $defaults = {
 		ip        => $request->remote_ip,
 		lang      => $lang,
-		domain    => $request->hostname,
+		hostname  => $request->hostname,
 		path_info => decode_utf8($request->path),
 		form      => $form,
 		headers   => $request->headers,
+		scheme    => $request->scheme,
 		cookie    => $cookie,
 		(exists ($cookie->{auth})     ? (auth     => $cookie->{auth})     : ()),
 		(exists ($cookie->{auth_adm}) ? (auth_adm => $cookie->{auth_adm}) : ()),

@@ -272,7 +272,11 @@ sub validate {
 				$model = 'rpc_site';
 			} else {
 				if ($new_rules->{model} =~ /::/) {
-					$model = app_namespace . $new_rules->{model};
+					if ($new_rules->{model} =~ /^PEF::Front/) {
+						$model = $new_rules->{model};
+					} else {
+						$model = app_namespace . $new_rules->{model};
+					}
 				} else {
 					$model = $new_rules->{model};
 				}
