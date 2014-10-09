@@ -2,9 +2,9 @@ package PEF::Front::Request;
 use strict;
 use warnings;
 use JSON;
-use Encode;
-use HTTP::Headers;
 use Carp ();
+use Encode;
+use PEF::Front::Headers;
 use PEF::Front::File;
 
 sub new {
@@ -32,10 +32,10 @@ sub input            { $_[0]->{env}{'psgi.input'} }
 sub content_length   { $_[0]->{env}{CONTENT_LENGTH} }
 sub content_type     { $_[0]->{env}{CONTENT_TYPE} }
 sub raw_body         { $_[0]->{raw_body} }
-sub content_encoding { shift->headers->content_encoding(@_) }
-sub header           { shift->headers->header(@_) }
-sub referer          { shift->headers->referer(@_) }
-sub user_agent       { shift->headers->user_agent(@_) }
+sub content_encoding { $_[0]->headers->get_header("content_encoding") }
+sub header           { $_[0]->headers->get_header($_[1]) }
+sub referer          { $_[0]->headers->get_header("referer") }
+sub user_agent       { $_[0]->headers->get_header("user_agent") }
 
 sub logger {
 	$_[0]->{env}{'psgix.logger'} || sub { }
@@ -92,7 +92,7 @@ sub _parse_urlencoded {
 		my ($name, $value) =
 		  map { tr/+/ /; s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg; $_ }
 		  split (/=/, $pair, 2);
-		eval { $form->{$name} = decode_utf8 $value if $name };
+		eval { $form->{decode_utf8($name)} = decode_utf8 $value if $name };
 	}
 	return $form;
 }
@@ -101,10 +101,10 @@ sub headers {
 	my $self = shift;
 	if (!defined $self->{headers}) {
 		my $env = $self->{env};
-		$self->{headers} = HTTP::Headers->new(
+		$self->{headers} = PEF::Front::HTTPHeaders->new(
 			map {
-				(my $field = $_) =~ s/^HTTPS?_//;
-				($field => $env->{$_});
+				(my $field = decode_utf8 $_) =~ s/^https?_//;
+				($field => decode_utf8 $env->{$_});
 			  }
 			  grep {
 				/^HTTP/ || /^CONTENT/

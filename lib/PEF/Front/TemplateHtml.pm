@@ -39,14 +39,14 @@ sub handler {
 		my @params = split /\//, $params;
 		for my $pv (@params) {
 			my ($p, $v) = split /-/, uri_unescape($pv), 2;
-			if (!defined($v)) {
+			if (!defined ($v)) {
 				$v = $p;
 				$p = 'cookie';
 			}
 			if (not exists $form->{$p}) {
 				$form->{$p} = $v;
 			} else {
-				if (ref($form->{$p})) {
+				if (ref ($form->{$p})) {
 					push @{$form->{$p}}, $v;
 				} else {
 					$form->{$p} = [$form->{$p}, $v];
@@ -67,15 +67,15 @@ sub handler {
 		ip        => $request->remote_ip,
 		lang      => $lang,
 		domain    => $request->hostname,
-		path      => $request->path,
+		path_info => $request->path,
 		form      => $form,
 		cookie    => $cookie,
 		template  => $template,
 		time      => time,
 		gmtime    => [gmtime],
 		localtime => [localtime],
-		(exists($cookie->{auth})     ? (auth     => $cookie->{auth})     : ()),
-		(exists($cookie->{auth_adm}) ? (auth_adm => $cookie->{auth_adm}) : ()),
+		(exists ($cookie->{auth})     ? (auth     => $cookie->{auth})     : ()),
+		(exists ($cookie->{auth_adm}) ? (auth_adm => $cookie->{auth_adm}) : ()),
 	};
 	my $model = sub {
 		my %req;
@@ -88,11 +88,11 @@ sub handler {
 			}
 		}
 		$req{method} = $method if defined $method;
-		my $vreq = eval {validate(\%req, $defaults)};
+		my $vreq = eval { validate(\%req, $defaults) };
 		my $response;
 		if (!$@) {
 			my $as = get_method_attrs($vreq => 'allowed_source');
-			if ($as && ((!ref($as) && $as ne 'template') || (ref($as) eq 'ARRAY' && !grep {$_ eq 'template'} @$as))) {
+			if ($as && ((!ref ($as) && $as ne 'template') || (ref ($as) eq 'ARRAY' && !grep { $_ eq 'template' } @$as))) {
 				$log->({level => "debug", message => "not allowed source"});
 				return {result => 'INTERR', answer => 'Unallowed calling source', answer_args => []};
 			}
@@ -102,23 +102,23 @@ sub handler {
 				my @keys;
 				if (not exists $cache_attr->{key}) {
 					@keys = ('method');
-				} elsif (ref($cache_attr->{key}) eq 'ARRAY') {
-					@keys = grep {exists $vreq->{$_}} @{$cache_attr->{key}};
-				} elsif (ref($cache_attr->{key}) eq '') {
+				} elsif (ref ($cache_attr->{key}) eq 'ARRAY') {
+					@keys = grep { exists $vreq->{$_} } @{$cache_attr->{key}};
+				} elsif (ref ($cache_attr->{key}) eq '') {
 					@keys = ($cache_attr->{key});
 				} else {
 					@keys = ('method');
 				}
 				$cache_attr->{expires} = 60 unless exists $cache_attr->{expires};
-				$cache_key = join(":", @{$vreq}{@keys});
+				$cache_key = join (":", @{$vreq}{@keys});
 				$log->({level => "debug", message => "cache key: $cache_key"});
 				$response = get_cache("ajax:$cache_key");
 			}
 			if (not $response) {
 				my $model = get_model($vreq);
 				$log->({level => "debug", message => "model: $model"});
-				if (index($model, "::") >= 0) {
-					my $class = substr($model, 0, rindex($model, "::"));
+				if (index ($model, "::") >= 0) {
+					my $class = substr ($model, 0, rindex ($model, "::"));
 					eval "use $class;\n\$response = $model(\$vreq)";
 				} else {
 					$response = model_rpc($model)->send_message($vreq)->recv_message;
@@ -166,13 +166,13 @@ sub handler {
 	$tt->define_vmethod(
 		'text',
 		gmtime => sub {
-			return [gmtime($_[0])];
+			return [gmtime ($_[0])];
 		}
 	);
 	$tt->define_vmethod(
 		'text',
 		localtime => sub {
-			return [localtime($_[0])];
+			return [localtime ($_[0])];
 		}
 	);
 	$tt->define_vmethod(

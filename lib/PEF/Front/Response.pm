@@ -7,93 +7,52 @@ use Encode;
 use utf8;
 use URI::Escape;
 use POSIX 'strftime';
+use PEF::Front::Headers;
 
 sub new {
 	my ($class) = @_;
 	my $self = bless {
 		status  => 200,
-		headers => [],
+		headers => PEF::Front::HTTPHeaders->new,
+		cookies => PEF::Front::Headers->new,
 		body    => [],
-		cookies => [],
 	}, $class;
 	$self;
 }
 
 sub add_header {
-	my ($self, $key, $value, $intkey) = @_;
-	$intkey ||= 'headers';
-	push @{$self->{$intkey}}, ($key, $value);
+	my ($self, $key, $value) = @_;
+	$self->{headers}->add_header($key, $value);
 }
 
 sub set_header {
-	my ($self, $key, $value, $intkey) = @_;
-	$intkey ||= 'headers';
-	my $set = 0;
-	for (my $i = 0; $i < @{$self->{$intkey}}; $i += 2) {
-		if ($self->{$intkey}[$i] eq $key) {
-			unless ($set) {
-				$self->{$intkey}[$i + 1] = $value;
-				$set = 1;
-			} else {
-				splice(@{$self->{$intkey}}, $i, 2);
-				$i -= 2;
-			}
-		}
-	}
-	$self->add_header($key, $value, $intkey) unless $set;
+	my ($self, $key, $value) = @_;
+	$self->{headers}->set_header($key, $value);
 }
 
 sub remove_header {
-	my ($self, $key, $value, $intkey) = @_;
-	$intkey ||= 'headers';
-	for (my $i = 0; $i < @{$self->{$intkey}}; $i += 2) {
-		if ($self->{$intkey}[$i] eq $key) {
-			if (defined $value) {
-				if ($self->{$intkey}[$i + 1] eq $value) {
-					splice(@{$self->{$intkey}}, $i, 2);
-					$i -= 2;
-				}
-			} else {
-				splice(@{$self->{$intkey}}, $i, 2);
-				$i -= 2;
-			}
-		}
-	}
+	my ($self, $key, $value) = @_;
+	$self->{headers}->remove_header($key, $value);
 }
 
 sub get_header {
-	my ($self, $key, $intkey) = @_;
-	$intkey ||= 'headers';
-	my $value;
-	for (my $i = 0; $i < @{$self->{$intkey}}; $i += 2) {
-		if ($self->{$intkey}[$i] eq $key) {
-			if (defined $value) {
-				if (ref($value)) {
-					push @{$value}, $self->{$intkey}[$i + 1];
-				} else {
-					$value = [$value, $self->{$intkey}[$i + 1]];
-				}
-			} else {
-				$value = $self->{$intkey}[$i + 1];
-			}
-		}
-	}
-	return $value;
+	my ($self, $key) = @_;
+	$self->{headers}->get_header($key);
 }
 
 sub set_cookie {
 	my ($self, $key, $value) = @_;
-	$self->set_header($key, $value, 'cookies');
+	$self->{cookies}->set_header($key, $value);
 }
 
 sub remove_cookie {
 	my ($self, $key) = @_;
-	$self->remove_header($key, undef, 'cookies');
+	$self->{cookies}->remove_header($key);
 }
 
 sub get_cookie {
 	my ($self, $key) = @_;
-	$self->get_header($key, 'cookies');
+	$self->{cookies}->get_header($key);
 }
 
 sub set_body {
@@ -106,7 +65,7 @@ sub add_body {
 	push @{$self->{body}}, $body;
 }
 
-sub get_body {$_[0]->{body}}
+sub get_body { $_[0]->{body} }
 
 sub status {
 	my ($self, $status) = @_;
@@ -131,28 +90,38 @@ sub content_type {
 }
 
 sub expires {
-	my $expires = eval {parse_duration($_[0])} || 0;
-	return strftime("%a, %d-%b-%Y %H:%M:%S GMT", gmtime(time + $expires));
+	my $expires = eval { parse_duration($_[0]) } || 0;
+	return strftime("%a, %d-%b-%Y %H:%M:%S GMT", gmtime (time + $expires));
+}
+
+sub safe_encode_utf8 {
+	return encode_utf8($_[0]) if not ref ($_[0]) && utf8::is_utf8($_[0]);
+	$_[0];
 }
 
 sub make_headers {
 	my ($self) = @_;
-	my @headers = map {utf8::is_utf8($_) ? encode_utf8($_) : $_} @{$self->{headers}};
-	for (my $i = 0; $i < @{$self->{cookies}}; $i += 2) {
-		my $value = $self->{cookies}[$i + 1];
-		$value = {value => $value} unless ref($value) eq 'HASH';
+	my $headers = $self->{headers}->get_all_headers;
+	for (@$headers) {
+		$_ = encode_utf8($_) if utf8::is_utf8($_);
+	}
+	my $cookies = $self->{cookies}->get_all_headers;
+	for (my $i = 0 ; $i < @$cookies ; $i += 2) {
+		my $name  = safe_encode_utf8($cookies->[$i]);
+		my $value = $cookies->[$i + 1];
+		$value = {value => $value} unless ref ($value) eq 'HASH';
+		no utf8;
 		my @cookie =
-		  (     URI::Escape::uri_escape($self->{cookies}[$i]) . "="
-			  . URI::Escape::uri_escape(utf8::is_utf8($value->{value}) ? encode_utf8($value->{value}) : $value->{value}));
+		  (URI::Escape::uri_escape($name) . "=" . URI::Escape::uri_escape(safe_encode_utf8($value->{value})));
 		push @cookie, "domain=" . $value->{domain}            if $value->{domain};
 		push @cookie, "path=" . $value->{path}                if $value->{path};
 		push @cookie, "expires=" . expires($value->{expires}) if $value->{expires};
 		push @cookie, "max-age=" . $value->{"max-age"}        if $value->{"max-age"};
 		push @cookie, "secure"                                if $value->{secure};
 		push @cookie, "HttpOnly"                              if $value->{httponly};
-		push @headers, ('Set-Cookie' => join "; ", @cookie);
+		push @$headers, ('Set-Cookie' => join "; ", @cookie);
 	}
-	return [$self->status, \@headers];
+	return [$self->status, $headers];
 }
 
 sub response {
