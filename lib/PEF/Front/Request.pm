@@ -78,7 +78,7 @@ sub cookies {
 		$pair =~ s/^\s+//;
 		$pair =~ s/\s+$//;
 		my ($key, $value) =
-		  map { tr/+/ /; s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg; $_ } split ("=", $pair, 2);
+		  map { tr/+/ /; s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg; decode_utf8 $_ } split ("=", $pair, 2);
 		$results{$key} = $value;
 	}
 	$self->{cookies} = \%results;
@@ -130,18 +130,22 @@ sub _parse_request_body {
 	}
 	return $self->{body_params} if exists $self->{body_params};
 	if (index ($ct, 'application/x-www-form-urlencoded') == 0) {
-		$_[0]->{raw_body} = '';
+		$self->{raw_body} = '';
 		my $buffer;
 		while ($cl && $self->input->read($buffer, $cl)) {
 			$self->{raw_body} .= $buffer;
 			$cl -= length $buffer;
 		}
-		$self->{body_params} = _parse_urlencoded($_[0]->{raw_body});
+		$self->{body_params} = _parse_urlencoded($self->{raw_body});
 	} elsif (index ($ct, 'application/json') == 0) {
-		$_[0]->{raw_body} = '';
-		$self->input->read($_[0]->{raw_body}, $cl);
-		my $from_json = $_[0]->{raw_body};
-		if (substr ($_[0]->{raw_body}, 0, 2) eq '%7') {
+		$self->{raw_body} = '';
+		my $buffer;
+		while ($cl && $self->input->read($buffer, $cl)) {
+			$self->{raw_body} .= $buffer;
+			$cl -= length $buffer;
+		}
+		my $from_json = $self->{raw_body};
+		if (substr ($self->{raw_body}, 0, 2) eq '%7') {
 			$from_json =~ tr/+/ /;
 			$from_json =~ s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg;
 		}

@@ -38,7 +38,7 @@ sub handler {
 	if ($params) {
 		my @params = split /\//, $params;
 		for my $pv (@params) {
-			my ($p, $v) = split /-/, uri_unescape($pv), 2;
+			my ($p, $v) = map { tr/+/ /; decode_utf8 $_} split /-/, uri_unescape($pv), 2;
 			if (!defined ($v)) {
 				$v = $p;
 				$p = 'cookie';
@@ -67,7 +67,7 @@ sub handler {
 		ip        => $request->remote_ip,
 		lang      => $lang,
 		domain    => $request->hostname,
-		path_info => $request->path,
+		path_info => decode_utf8($request->path),
 		form      => $form,
 		cookie    => $cookie,
 		headers   => $request->headers,
