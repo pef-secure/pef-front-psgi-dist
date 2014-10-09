@@ -20,7 +20,6 @@ WriteMakefile(
 		'GDBM_File'             => 1,
 		'GD::SecurityImage'     => 1,
 		'Geo::IPfree'           => 1,
-		'HTTP::Headers'         => 1,
 		'IO::Socket'            => 1,
 		'JSON'                  => 1,
 		'MLDBM'                 => 1,
