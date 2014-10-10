@@ -125,14 +125,21 @@ sub build_validator {
 					if ($default =~ /^defaults\.([\w\d].*)/) {
 						$default        = "$def {$1}";
 						$check_defaults = "exists($def {$1})";
+					} elsif ($default =~ /^headers\.(.*)/) {
+						my $h = $1;
+						$h =~ s/\s*$//;
+						$h =~ s/'/\\'/g;
+						$default = "$def {headers}->get_header('$h')";
+					} elsif ($default =~ /^cookies\.(.*)/) {
+						my $c = $1;
+						$c =~ s/\s*$//;
+						$c =~ s/'/\\'/g;
+						$default        = "$def {cookies}->{'$c'}";
+						$check_defaults = "exists($def {cookies}->{'$c'})";
 					} else {
-						if ($default =~ /^headers\.(.*)/) {
-							my $h = $1;
-							$h =~ s/\s*$//;
-							$default = "$def {headers}->get_header('$h')";
-						} else {
-							$default = "'$default'";
-						}
+						$default =~ s/\s*$//;
+						$default =~ s/"/\\"/g;
+						$default = "\"$default\"";
 					}
 				}
 				if (exists $mr->{value}) {

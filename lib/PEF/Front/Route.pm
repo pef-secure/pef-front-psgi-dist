@@ -26,7 +26,7 @@ sub add_route {
 			my @flags = split /[, ]+/, $rdest->[1] if @$rdest > 1;
 			for my $f (@flags) {
 				my ($p, $v) = split /=/, $f, 2;
-				$rewrite[$ri][$flagpos]{$p} = $v;
+				$rewrite[$ri][$flagpos]{uc $p} = $v;
 			}
 		} elsif (ref($rdest) && ref($rdest) ne 'CODE') {
 			die "bad routing rule at $rule";
@@ -38,15 +38,15 @@ sub add_route {
 				$rewrite[$ri][$tranpos] =
 				    eval "sub {my \$request = \$_[0]; my \$url = \$request->path; return \$url if \$url =~ s\"$rule\""
 				  . $rewrite[$ri][$nurlpos] . "\""
-				  . (exists($rewrite[$ri][$flagpos]{re}) ? $rewrite[$ri][$flagpos]{re} : "")
+				  . (exists($rewrite[$ri][$flagpos]{RE}) ? $rewrite[$ri][$flagpos]{RE} : "")
 				  . "; return }";
 			} else {
 				$rewrite[$ri][$tranpos] =
 				    eval "sub {my \$request = \$_[0]; "
 				  . "my \@params = \$request->path =~ "
 				  . (
-					exists($rewrite[$ri][$flagpos]{re})
-					? "m\"$rule\"" . $rewrite[$ri][$flagpos]{re} . ";"
+					exists($rewrite[$ri][$flagpos]{RE})
+					? "m\"$rule\"" . $rewrite[$ri][$flagpos]{RE} . ";"
 					: "m\"$rule\"; "
 				  )
 				  . "return \$rewrite[$ri][$nurlpos]->(\$request, \@params) if \@params;"

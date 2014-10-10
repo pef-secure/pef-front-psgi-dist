@@ -15,7 +15,7 @@ use PEF::Front::Response;
 sub handler {
 	my $request       = $_[0];
 	my $form          = $request->params;
-	my $cookie        = $request->cookies;
+	my $cookies       = $request->cookies;
 	my $log           = $request->logger;
 	my $http_response = PEF::Front::Response->new();
 	my $lang;
@@ -69,15 +69,13 @@ sub handler {
 		hostname  => $request->hostname,
 		path_info => decode_utf8($request->path),
 		form      => $form,
-		cookie    => $cookie,
+		cookies   => $cookies,
 		headers   => $request->headers,
 		template  => $template,
 		scheme    => $request->scheme,
 		time      => time,
 		gmtime    => [gmtime],
 		localtime => [localtime],
-		(exists ($cookie->{auth})     ? (auth     => $cookie->{auth})     : ()),
-		(exists ($cookie->{auth_adm}) ? (auth_adm => $cookie->{auth_adm}) : ()),
 	};
 	my $model = sub {
 		my %req;

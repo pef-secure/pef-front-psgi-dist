@@ -16,7 +16,7 @@ use PEF::Front::Response;
 sub ajax {
 	my $request       = $_[0];
 	my $form          = $request->params;
-	my $cookie        = $request->cookies;
+	my $cookies       = $request->cookies;
 	my $log           = $request->logger;
 	my $http_response = PEF::Front::Response->new();
 	my $lang;
@@ -70,9 +70,7 @@ sub ajax {
 		form      => $form,
 		headers   => $request->headers,
 		scheme    => $request->scheme,
-		cookie    => $cookie,
-		(exists ($cookie->{auth})     ? (auth     => $cookie->{auth})     : ()),
-		(exists ($cookie->{auth_adm}) ? (auth_adm => $cookie->{auth_adm}) : ()),
+		cookies   => $cookies,
 	};
 	my $vreq = eval { validate(\%request, $defaults) };
 	my $response;
@@ -127,7 +125,7 @@ sub ajax {
 			my $stash = {
 				response => $response,
 				form     => $form,
-				cookie   => $cookie,
+				cookies  => $cookies,
 				defaults => $defaults,
 				request  => $vreq,
 				result   => $response->{result},
