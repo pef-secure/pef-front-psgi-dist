@@ -12,7 +12,7 @@ sub make_captcha {
 		height => $req->{height},
 	);
 	my $md5sum = $captcha->generate_code($req->{size});
-	return $md5sum;
+	return {result => "OK", code => $md5sum};
 }
 
 sub check_captcha {

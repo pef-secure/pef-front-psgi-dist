@@ -73,7 +73,7 @@ sub build_validator {
 				  . "\t\tunless PEF::Front::Captcha::check_captcha($jsn {$pr}, $jsn {$mr->{captcha}}) ;\n}\n";
 			}
 			if (exists ($mr->{type})) {
-				if (substr ($mr->{type}, 0, 1) eq 'F' || substr ($mr->{type}, 0, 1) eq 'f') {
+				if (uc (substr ($mr->{type}, 0, 1)) eq 'F') {
 					$sub_test .=
 					    "croak {result => 'BADPARAM', answer => 'Bad type parameter \$1', "
 					  . "answer_args => ['param-$pr']} "
@@ -82,7 +82,8 @@ sub build_validator {
 					$sub_test .=
 					    "croak {result => 'BADPARAM', answer => 'Bad type parameter \$1', "
 					  . "answer_args => ['param-$pr']} "
-					  . "unless ref ($jsn {$pr}) eq '$mr->{type}';\n";
+					  . "unless ref ($jsn {$pr}) eq '"
+					  . uc ($mr->{type}) . "';\n";
 				}
 			}
 			if (exists ($mr->{'max-size'})) {
