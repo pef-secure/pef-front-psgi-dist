@@ -58,12 +58,12 @@ sub add_route {
 			} elsif (!ref $rewrite[$ri][$nurlpos]) {
 				$rewrite[$ri][$tranpos] =
 				    eval "sub {my \$request = \$_[0]; "
-				  . "return '$rewrite[$ri][$nurlpos]' if \$rewrite[$ri][0]->(\$request);"
+				  . "return '$rewrite[$ri][$nurlpos]' if \$rewrite[$ri][$rulepos]->(\$request);"
 				  . "return; }";
 			} else {
 				$rewrite[$ri][$tranpos] =
 				    eval "sub {my \$request = \$_[0]; "
-				  . "my \@params = \$rewrite[$ri][0]->(\$request);"
+				  . "my \@params = \$rewrite[$ri][$rulepos]->(\$request);"
 				  . "return \$rewrite[$ri][$nurlpos]->(\$request, \@params) if \@params;"
 				  . "return; }";
 			}
@@ -76,7 +76,7 @@ sub add_route {
 			} else {
 				$rewrite[$ri][$tranpos] =
 				    eval "sub {my \$request = \$_[0]; "
-				  . "return \$rewrite[$ri][$nurlpos]->(\$request, \@params) if \$request->path eq '$rule';"
+				  . "return \$rewrite[$ri][$nurlpos]->(\$request) if \$request->path eq '$rule';"
 				  . "return; }";
 			}
 		}
