@@ -23,7 +23,7 @@ INIT {
 		unlink_on_exit => 0,
 		expire_time    => cache_expire,
 		init_file      => 1
-	);
+	) or die "Can't create cache: $!";
 }
 
 sub get_cache {
