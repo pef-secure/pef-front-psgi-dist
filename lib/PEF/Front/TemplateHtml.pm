@@ -3,6 +3,7 @@ package PEF::Front::TemplateHtml;
 use strict;
 use warnings;
 use Data::Dumper;
+use Scalar::Util qw(blessed);
 use Encode;
 use URI::Escape;
 use Template::Alloy;
@@ -11,72 +12,33 @@ use PEF::Front::Cache;
 use PEF::Front::Validator;
 use PEF::Front::NLS;
 use PEF::Front::Response;
+use PEF::Front::Ajax;
 
 sub handler {
-	my $request       = $_[0];
-	my $form          = $request->params;
-	my $cookies       = $request->cookies;
-	my $log           = $request->logger;
+	my $request  = $_[0];
+	my $form     = $request->params;
+	my $cookies  = $request->cookies;
+	my $log      = $request->logger;
+	my $defaults = PEF::Front::Ajax::prepare_defaults($request);
+	if (blessed($defaults) && $defaults->isa('PEF::Front::Response')) {
+		return $defaults->response();
+	}
 	my $http_response = PEF::Front::Response->new();
-	my $lang;
-	my ($template, $params);
-	if (url_contains_lang) {
-		($lang, $template, $params) = $request->path =~ m{^/([\w][\w])/app([^/]+)/?(.*)$};
-		if (not defined $lang) {
-			$http_response->redirect(301, location_error);
-			return $http_response->response();
-		}
-	} else {
-		($template, $params) = $request->path =~ m{^/app([^/]+)/?(.*)$};
-		if (not defined $template) {
-			$http_response->redirect(301, location_error);
-			return $http_response->response();
-		}
-		$lang = guess_lang($request);
-	}
+	my $lang          = $defaults->{lang};
 	$http_response->set_cookie(lang => $lang);
-	if ($params) {
-		my @params = split /\//, $params;
-		for my $pv (@params) {
-			my ($p, $v) = map { tr/+/ /; decode_utf8 $_} split /-/, uri_unescape($pv), 2;
-			if (!defined ($v)) {
-				$v = $p;
-				$p = 'cookie';
-			}
-			if (not exists $form->{$p}) {
-				$form->{$p} = $v;
-			} else {
-				if (ref ($form->{$p})) {
-					push @{$form->{$p}}, $v;
-				} else {
-					$form->{$p} = [$form->{$p}, $v];
-				}
-			}
-		}
-	}
+	my $template = delete $defaults->{method};
 	$template = decode_utf8($template);
-	$template =~ s/[[:lower:]]\K([[:upper:]])/_\l$1/g;
-	$template = lcfirst $template;
+	$template =~ tr/ /_/;
 	my $template_file = "$template.html";
 	if (!-f template_dir($request->hostname, $lang) . "/" . $template_file) {
 		$log->({level => "debug", message => " template '$template_file' not found"});
 		$http_response->redirect(301, location_error);
 		return $http_response->response();
 	}
-	my $defaults = {
-		ip        => $request->remote_ip,
-		lang      => $lang,
-		hostname  => $request->hostname,
-		path_info => decode_utf8($request->path),
-		form      => $form,
-		cookies   => $cookies,
-		headers   => $request->headers,
-		template  => $template,
-		scheme    => $request->scheme,
-		time      => time,
-		gmtime    => [gmtime],
-		localtime => [localtime],
-	};
+	$defaults->{template}  = $template;
+	$defaults->{time}      = time;
+	$defaults->{gmtime}    = [gmtime];
+	$defaults->{localtime} = [localtime];
 	my $model = sub {
 		my %req;
 		my $method;
