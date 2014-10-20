@@ -61,15 +61,14 @@ sub handler {
 			my $cache_attr = get_method_attrs($vreq => 'cache');
 			my $cache_key;
 			if ($cache_attr) {
+				$cache_attr = {key => 'method', expires => $cache_attr} if not ref $cache_attr;
 				my @keys;
-				if (not exists $cache_attr->{key}) {
-					@keys = ('method');
-				} elsif (ref ($cache_attr->{key}) eq 'ARRAY') {
+				if (ref ($cache_attr->{key}) eq 'ARRAY') {
 					@keys = grep { exists $vreq->{$_} } @{$cache_attr->{key}};
-				} elsif (ref ($cache_attr->{key}) eq '') {
-					@keys = ($cache_attr->{key});
-				} else {
+				} elsif (not exists $cache_attr->{key}) {
 					@keys = ('method');
+				} else {
+					@keys = ($cache_attr->{key});
 				}
 				$cache_attr->{expires} = 60 unless exists $cache_attr->{expires};
 				$cache_key = join (":", @{$vreq}{@keys});
