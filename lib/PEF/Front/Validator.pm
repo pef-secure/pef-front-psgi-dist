@@ -4,6 +4,7 @@ use warnings;
 use utf8;
 use Encode;
 use YAML::XS;
+use Data::Dumper;
 use Carp qw(cluck croak);
 use Regexp::Common 'RE_ALL';
 use PEF::Front::Captcha;
@@ -129,18 +130,17 @@ sub build_validator {
 					} elsif ($default =~ /^headers\.(.*)/) {
 						my $h = $1;
 						$h =~ s/\s*$//;
-						$h =~ s/'/\\'/g;
-						$default = "$def {headers}->get_header('$h')";
+						$h       = quote_var($h);
+						$default = "$def {headers}->get_header($h)";
 					} elsif ($default =~ /^cookies\.(.*)/) {
 						my $c = $1;
 						$c =~ s/\s*$//;
-						$c =~ s/'/\\'/g;
-						$default        = "$def {cookies}->{'$c'}";
-						$check_defaults = "exists($def {cookies}->{'$c'})";
+						$c              = quote_var($c);
+						$default        = "$def {cookies}->{$c}";
+						$check_defaults = "exists($def {cookies}->{$c})";
 					} else {
 						$default =~ s/\s*$//;
-						$default =~ s/"/\\"/g;
-						$default = "\"$default\"";
+						$default = quote_var($default);
 					}
 				}
 				if (exists $mr->{value}) {
@@ -185,6 +185,137 @@ sub build_validator {
 	}
 	$validator_sub .= "\$_[0]\n};";
 	$validator_sub;
+}
+
+sub quote_var {
+	my $s = $_[0];
+	my $d = Data::Dumper->new([$s]);
+	$d->Terse(1);
+	my $qs = $d->Dump;
+	substr ($qs, -1, 1, '') if substr ($qs, -1, 1) eq "\n";
+	return $qs;
+}
+
+sub make_value_parser {
+	my $value = $_[0];
+	my $ret   = quote_var($value);
+	if (substr ($value, 0, 3) eq 'TT ') {
+		my $exp = substr ($value, 3);
+		$exp =~ quote_var($exp);
+		substr ($exp, 0,  1, '') if substr ($exp, 0,  1) eq "'";
+		substr ($exp, -1, 1, '') if substr ($exp, -1, 1) eq "'";
+		$ret = qq~do {
+			my \$tmpl = '[% $exp %]';
+			my \$out;
+			\$tt->process_simple(\\\$tmpl, \$stash, \\\$out) or
+				\$logger->({level => \"error\", message => 'error: $exp - ' . \$tt->error});\n
+			\$out;
+		}~;
+	}
+	return $ret;
+}
+
+sub make_cookie_parser {
+	my ($name, $value) = @_;
+	$value = {value => $value} if not ref $value;
+	$name = quote_var($name);
+	$value->{path} = '/' if not $value->{path};
+	my $ret = qq~\t\$http_response->set_cookie($name, {\n~;
+	for my $pn (qw/value expires domain path secure max-age httponly/) {
+		if (exists $value->{$pn}) {
+			$ret .= "\t\t" . quote_var($pn) . ' => ' . make_value_parser($value->{$pn}) . ",\n";
+		}
+	}
+	$ret .= qq~\t});\n~;
+	return $ret;
+}
+
+sub make_rules_parser {
+	my ($start) = @_;
+	$start = {redirect => $start} if not ref $start or 'ARRAY' eq ref $start;
+	my $sub_int = "sub {\n";
+	for my $cmd (keys %$start) {
+		if ($cmd eq 'redirect') {
+			my $redir = $start->{$cmd};
+			$redir = [$redir] if 'ARRAY' ne ref $redir;
+			my $rw = "\t{\n";
+			for my $r (@$redir) {
+				$rw .= "\t\t\$new_location = " . make_value_parser($r) . ";\n\t\tlast if \$new_location;\n";
+			}
+			$rw .= "\t}\n";
+			$sub_int .= $rw;
+		} elsif ($cmd eq 'set-cookie') {
+			for my $c (keys %{$start->{$cmd}}) {
+				$sub_int .= make_cookie_parser($c => $start->{$cmd}{$c});
+			}
+		} elsif ($cmd eq 'unset-cookie') {
+			my $unset = $start->{$cmd};
+			$unset = [$unset] if not ref $unset;
+			for my $c (@$unset) {
+				$sub_int .= make_cookie_parser($c => {value => '', expires => -3600});
+			}
+		} elsif ($cmd eq 'add-header') {
+			for my $h (keys %{$start->{$cmd}}) {
+				my $value = make_value_parser($start->{$cmd}{$h});
+				$sub_int .= qq~\t\$http_response->add_header(~ . quote_var($h) . qq~, $value);\n~;
+			}
+		} elsif ($cmd eq 'set-header') {
+			for my $h (keys %{$start->{$cmd}}) {
+				my $value = make_value_parser($start->{$cmd}{$h});
+				$sub_int .= qq~\t\$http_response->set_header(~ . quote_var($h) . qq~, $value);\n~;
+			}
+		} elsif ($cmd eq 'filter') {
+			my $full_func;
+			my $use_class;
+			if (index ($start->{$cmd}, 'PEF::Core::') == 0) {
+				$full_func = $start->{$cmd};
+				$use_class = substr ($full_func, 0, rindex ($full_func, "::"));
+				$sub_int .= qq~\teval {use $use_class; $full_func(\$response, \$defaults)};\n~;
+			} else {
+				$full_func = $start->{$cmd};
+				$use_class = substr ($full_func, 0, rindex ($full_func, "::"));
+				(my $clf = $use_class) =~ s|::|/|g;
+				$full_func = app_namespace . "OutFilter::$full_func";
+				my $mrf = out_filter_dir . "/$clf.pm";
+				$sub_int .= qq~\teval {require '$mrf'; $full_func(\$response, \$defaults)};\n~;
+			}
+			$sub_int .=
+			    qq~\tif (\$@) {\n~
+			  . qq~\t\t\$logger->({level => \"error\", message => \"output filter: \" . Dumper($@)});\n~
+			  . qq~\t\t\$response = {result => 'INTERR', answer => 'Bad output filter'};\n\t\treturn;~
+			  . qq~\n\t}\n~;
+		} elsif ($cmd eq 'answer') {
+			$sub_int .= qq~\t\$response->{answer} = ~ . make_value_parser($start->{$cmd}) . qq~;\n~;
+		}
+	}
+	$sub_int .= "\t}";
+	return $sub_int;
+}
+
+sub build_result_processor {
+	my $result_rules = $_[0];
+	my $result_sub =
+	    "sub {\n\tmy (\$response, \$defaults, \$stash, \$http_response, \$tt, \$logger) = \@_;\n"
+	  . "\tmy \$new_location;\n"
+	  . "\tmy \%rc = (\n";
+	my %rc_array;
+	for my $rc (keys %{$result_rules}) {
+		$result_sub .= "\t" . quote_var($rc) . " => " . make_rules_parser($result_rules->{$rc}) . ",\n";
+	}
+	$result_sub .=
+	    "\t);\n"
+	  . "\tmy \$rc;\n"
+	  . "\tif (not exists \$rc{\$response->{result}}) {\n"
+	  . "\t\tif(exists \$rc{DEFAULT}) { \$rc = 'DEFAULT' }\n"
+	  . "\t\telse {\n"
+	  . "\t\t\$logger->({level => \"error\", message => \"error: Unexpected result code: '\$response->{result}'\"});\n"
+	  . "\t\treturn (undef, {result => 'INTERR', answer => 'Bad result code'});\n"
+	  . "\t\t}\n"
+	  . "\t} else {\$rc = \$response->{result}}\n"
+	  . "\t\$rc{\$rc}->();\n"
+	  . "\treturn (\$new_location, \$response);\n" . "}\n";
+	print $result_sub;
+	return eval $result_sub;
 }
 
 sub validate {
@@ -233,10 +364,6 @@ sub validate {
 		} else {
 			my $new_rules = $new_rules[0];
 			$cache{'-base-'}{rules} = $new_rules;
-			my $param_rules = $new_rules->{params} || {};
-			for my $pr (keys %$param_rules) {
-				msg_dynamic("validator/base", 'en', "param-$pr");
-			}
 		}
 	}
 	if (!exists ($cache{$method}) || $cache{$method}{modified} != $stats[9]) {
@@ -283,13 +410,16 @@ sub validate {
 					if ($new_rules->{model} =~ /^PEF::Front/) {
 						$model = $new_rules->{model};
 					} else {
-						$model = app_namespace . $new_rules->{model};
+						$model = app_namespace . "Local::$new_rules->{model}";
 					}
 				} else {
 					$model = $new_rules->{model};
 				}
 			}
 			$cache{$method}{model} = $model;
+			if (exists $new_rules->{result}) {
+				$cache{$method}{result_sub} = build_result_processor($new_rules->{result});
+			}
 		}
 		$cache{$method}{modified} = $stats[9];
 	}
