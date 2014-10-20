@@ -15,13 +15,14 @@ our @EXPORT = qw{
 
 my $cache;
 
-INIT {
+BEGIN {
+	require PEF::Front::Config;
 	$cache = Cache::FastMmap->new(
-		share_file     => cache_file,
-		cache_size     => cache_size,
+		share_file     => cache_file(),
+		cache_size     => cache_size(),
 		empty_on_exit  => 0,
 		unlink_on_exit => 0,
-		expire_time    => cache_expire,
+		expire_time    => cache_expire(),
 		init_file      => 1
 	) or die "Can't create cache: $!";
 }
