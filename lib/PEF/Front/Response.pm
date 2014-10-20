@@ -76,9 +76,13 @@ sub status {
 sub redirect {
 	my ($self, $url, $status) = @_;
 	if ($url) {
-		$status ||= 302;
 		$self->set_header(Location => $url);
-		$self->status($status);
+		if (!defined $status) {
+			$status ||= $self->status;
+			$self->status(302) if $status < 300 || $status > 399;
+		} else {
+			$self->status($status);
+		}
 		$self->remove_header('Content-Type');
 	}
 }
