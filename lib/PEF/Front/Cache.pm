@@ -16,7 +16,6 @@ our @EXPORT = qw{
 my $cache;
 
 BEGIN {
-	require PEF::Front::Config;
 	$cache = Cache::FastMmap->new(
 		share_file     => cache_file(),
 		cache_size     => cache_size(),

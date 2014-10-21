@@ -95,7 +95,7 @@ sub std_model_rpc {
 	} else {
 		return PEF::Front::RPC->new(
 			'Addr' => model_rpc_site_addr(),
-			'Port' => model_rpc_admin_port(),
+			'Port' => model_rpc_site_port(),
 		);
 	}
 }
