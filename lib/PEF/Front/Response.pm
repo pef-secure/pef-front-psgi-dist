@@ -6,16 +6,36 @@ use Time::Duration::Parse;
 use Encode;
 use utf8;
 use URI::Escape;
+use URI;
 use POSIX 'strftime';
 use PEF::Front::Headers;
 
 sub new {
-	my ($class) = @_;
+	my ($class, %args) = @_;
+	my $status   = delete $args{status}  || 200;
+	my $body     = delete $args{body}    || [];
+	my $base_url = delete $args{base}    || '';
+	my $href     = delete $args{headers} || [];
+	my $cref     = delete $args{cookies} || [];
+	my @headers;
+	my @cookies;
+	if (ref ($href) eq 'HASH') {
+		@headers = %$href;
+	} elsif (ref ($href) eq 'ARRAY') {
+		@headers = @$href;
+	}
+	if (ref ($cref) eq 'HASH') {
+		@cookies = %$cref;
+	} elsif (ref ($cref) eq 'ARRAY') {
+		@cookies = @$cref;
+	}
+	$body = [$body] if not ref $body;
 	my $self = bless {
-		status  => 200,
-		headers => PEF::Front::HTTPHeaders->new,
-		cookies => PEF::Front::Headers->new,
-		body    => [],
+		status   => $status,
+		headers  => PEF::Front::HTTPHeaders->new(@headers),
+		cookies  => PEF::Front::Headers->new(@cookies),
+		body     => $body,
+		base_url => $base_url
 	}, $class;
 	$self;
 }
@@ -76,6 +96,10 @@ sub status {
 sub redirect {
 	my ($self, $url, $status) = @_;
 	if ($url) {
+		if ($self->{base_url} ne '') {
+			my $nuri = URI->new_abs($url, $self->{base_url});
+			$url = $nuri->as_string;
+		}
 		$self->set_header(Location => $url);
 		if (!defined $status) {
 			$status ||= $self->status;
