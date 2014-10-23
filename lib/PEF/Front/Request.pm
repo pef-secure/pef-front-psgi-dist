@@ -68,6 +68,14 @@ sub hostname {
 	$self->{hostname};
 }
 
+sub base {
+	my $self = $_[0];
+	return $self->{base} if exists $self->{base};
+	$self->{base} =
+	  $self->scheme . "://" . ($self->{env}{HTTP_HOST} || $self->{env}{SERVER_NAME}) . $self->request_uri;
+	$self->{base};
+}
+
 sub cookies {
 	my $self = $_[0];
 	return {} unless $self->{env}{HTTP_COOKIE};
