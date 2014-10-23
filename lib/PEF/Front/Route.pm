@@ -105,7 +105,7 @@ sub rewrite {
 				$npi ||= '';
 			}
 			if (%$rewrite_flags and exists $rewrite_flags->{R}) {
-				$http_response ||= PEF::Front::Response->new();
+				$http_response ||= PEF::Front::Response->new(base => $request->base);
 				$http_response->redirect($npi, $rewrite_flags->{R});
 			}
 			if (   !$http_response
@@ -113,7 +113,7 @@ sub rewrite {
 				&& defined ($rewrite_flags->{L})
 				&& $rewrite_flags->{L} > 0)
 			{
-				$http_response = PEF::Front::Response->new();
+				$http_response = PEF::Front::Response->new(base => $request->base);
 				$http_response->status($rewrite_flags->{L});
 			}
 			return $http_response
@@ -134,7 +134,7 @@ sub to_app {
 		if (url_contains_lang && (substr ($request->path, 0, 1) ne '/' || substr ($request->path, 0, 3) ne '/')) {
 			my $lang = guess_lang($request);
 			if ($request->method eq 'GET') {
-				my $http_response = PEF::Front::Response->new();
+				my $http_response = PEF::Front::Response->new(base => $request->base);
 				$http_response->redirect("/$lang" . $request->request_uri, 301);
 				return $http_response->response();
 			} else {
@@ -153,7 +153,7 @@ sub to_app {
 		{
 			return PEF::Front::Ajax::handler($request);
 		} else {
-			my $http_response = PEF::Front::Response->new();
+			my $http_response = PEF::Front::Response->new(base => $request->base);
 			$http_response->status(404);
 			return $http_response->response();
 		}
