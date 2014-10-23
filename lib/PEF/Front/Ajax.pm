@@ -23,15 +23,15 @@ sub prepare_defaults {
 	if (url_contains_lang) {
 		($lang, $src, $method, $params) = $request->path =~ m{^/([\w][\w])/(app|ajax|submit|get)([^/]+)/?(.*)$};
 		if (not defined $lang) {
-			my $http_response = PEF::Front::Response->new();
-			$http_response->redirect(301, location_error);
+			my $http_response = PEF::Front::Response->new(base => $request->base);
+			$http_response->redirect(location_error, 301);
 			return $http_response;
 		}
 	} else {
 		($src, $method, $params) = $request->path =~ m{^/(app|ajax|submit|get)([^/]+)/?(.*)$};
 		if (not defined $method) {
-			my $http_response = PEF::Front::Response->new();
-			$http_response->redirect(301, location_error);
+			my $http_response = PEF::Front::Response->new(base => $request->base);
+			$http_response->redirect(location_error, 301);
 			return $http_response;
 		}
 		$lang = guess_lang($request);
@@ -82,7 +82,7 @@ sub ajax {
 	if (blessed($defaults) && $defaults->isa('PEF::Front::Response')) {
 		return $defaults->response();
 	}
-	my $http_response = PEF::Front::Response->new();
+	my $http_response = PEF::Front::Response->new(base => $request->base);
 	my $lang          = $defaults->{lang};
 	my %request       = %$form;
 	my $src           = $defaults->{src};

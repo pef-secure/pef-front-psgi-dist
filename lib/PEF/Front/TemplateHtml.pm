@@ -23,8 +23,8 @@ sub handler {
 	if (blessed($defaults) && $defaults->isa('PEF::Front::Response')) {
 		return $defaults->response();
 	}
-	my $http_response = PEF::Front::Response->new();
-	my $lang          = $defaults->{lang};
+	my $http_response = PEF::Front::Response->new(base => $request->base);
+	my $lang = $defaults->{lang};
 	$http_response->set_cookie(lang => $lang);
 	my $template = delete $defaults->{method};
 	$template = decode_utf8($template);
@@ -32,7 +32,7 @@ sub handler {
 	my $template_file = "$template.html";
 	if (!-f template_dir($request->hostname, $lang) . "/" . $template_file) {
 		$log->({level => "debug", message => " template '$template_file' not found"});
-		$http_response->redirect(301, location_error);
+		$http_response->status(404);
 		return $http_response->response();
 	}
 	$defaults->{template}  = $template;
