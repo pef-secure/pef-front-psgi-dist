@@ -199,10 +199,8 @@ sub build_validator {
 	$validator_sub .= "\$_[0]\n};";
 	if (@add_use) {
 		my $use = join ("\n", map { "use $_;" } @add_use);
-		print "$use\n";
 		eval $use;
 	}
-	print $validator_sub;
 	$validator_sub;
 }
 
