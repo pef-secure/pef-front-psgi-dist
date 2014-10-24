@@ -170,7 +170,7 @@ sub handler {
 			return;
 		}
 	);
-	$http_response->content_type('text/html');
+	$http_response->content_type('text/html; charset=utf-8');
 	$http_response->set_body('');
 	return sub {
 		my $responder = $_[0];

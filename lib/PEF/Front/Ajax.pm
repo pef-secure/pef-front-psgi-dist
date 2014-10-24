@@ -196,7 +196,7 @@ sub ajax {
 			$args ||= [];
 			$response->{answer} = msg_get($lang, $response->{answer}, @$args)->{message};
 		}
-		$http_response->content_type('application/json');
+		$http_response->content_type('application/json; charset=utf-8');
 		$http_response->set_body(encode_json($response));
 		return $http_response->response();
 	} else {
@@ -217,7 +217,7 @@ sub ajax {
 			{
 				$http_response->content_type($response->{answer_content_type});
 			} else {
-				$http_response->content_type('text/html');
+				$http_response->content_type('text/html; charset=utf-8');
 			}
 			$http_response->set_body($response->{answer});
 			return $http_response->response();
