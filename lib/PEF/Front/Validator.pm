@@ -34,7 +34,7 @@ sub build_validator {
 	my $validator_sub = "sub { \n";
 	my $jsn           = '$_[0]->';
 	my $def           = '$_[1]->';
-
+	my @add_use;
 	for my $pr (keys %$method_rules) {
 		my $mr = $method_rules->{$pr};
 		$known_params{$pr} = undef;
@@ -65,6 +65,19 @@ sub build_validator {
 				    "croak {result => 'BADPARAM', answer => 'Bad parameter \$1', "
 				  . "answer_args => ['param-$pr']} "
 				  . "unless $jsn {$pr} =~ m/$mr->{regex}/;\n";
+			}
+			if (exists ($mr->{filter})) {
+				if ($mr->{filter} =~ /^\w+::/) {
+					$sub_test .= "$jsn {$pr} = " . app_namespace . "InFilter::$mr->{filter}($jsn {$pr}, \$_[1]);\n";
+					my $cl = app_namespace . "InFilter::$mr->{filter}";
+					push @add_use, substr ($cl, 0, rindex ($cl, "::"));
+				} else {
+					my $rearr =
+					  ref ($mr->{filter}) eq 'ARRAY' ? $mr->{filter} : ref ($mr->{filter}) ? [] : [$mr->{filter}];
+					for my $re (@$rearr) {
+						$sub_test .= "$jsn {$pr} =~ $re;\n" if $re =~ /^(s|tr|y)\b/;
+					}
+				}
 			}
 			if (exists ($mr->{captcha}) && $mr->{captcha} ne '') {
 				$sub_test .=
@@ -184,6 +197,12 @@ sub build_validator {
 		$validator_sub .= "}\n}\n";
 	}
 	$validator_sub .= "\$_[0]\n};";
+	if (@add_use) {
+		my $use = join ("\n", map { "use $_;" } @add_use);
+		print "$use\n";
+		eval $use;
+	}
+	print $validator_sub;
 	$validator_sub;
 }
 
