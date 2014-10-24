@@ -163,7 +163,7 @@ sub _parse_request_body {
 		$self->_parse_multipart_form;
 	}
 	if (exists $self->{body_params}{json}) {
-		my $form = eval { decode_json $self->{body_params}{json} } || {};
+		my $form = eval { from_json $self->{body_params}{json} } || {};
 		$self->{body_params} = {%{$self->{body_params}}, %$form};
 	}
 	return $self->{body_params};
