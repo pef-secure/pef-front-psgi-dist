@@ -92,7 +92,6 @@ sub import {
 
 sub rewrite {
 	my $request = $_[0];
-	my $env     = $request->env;
 	for (my $i = 0 ; $i < @rewrite ; ++$i) {
 		my $rewrite_func  = $rewrite[$i][$tranpos];
 		my $rewrite_flags = $rewrite[$i][$flagpos];
@@ -118,8 +117,7 @@ sub rewrite {
 			}
 			return $http_response
 			  if $http_response && blessed($http_response) && $http_response->isa('PEF::Front::Response');
-			$npi = '/' . $npi if !$npi || substr ($npi, 0, 1) ne '/';
-			$env->{PATH_INFO} = $npi;
+			$request->path($npi);
 			last if %$rewrite_flags and exists $rewrite_flags->{L};
 		}
 	}
@@ -138,10 +136,7 @@ sub to_app {
 				$http_response->redirect("/$lang" . $request->request_uri, 301);
 				return $http_response->response();
 			} else {
-				my $env = $request->env;
-				my $path = $env->{PATH_INFO} || '/';
-				$path = '/' . $path if substr ($path, 0, 1) ne '/';
-				$env->{PATH_INFO} = "/$lang$path";
+				$request->path("/$lang" . $request->path);
 			}
 		}
 		my $lang_offset = (url_contains_lang) ? 3 : 0;

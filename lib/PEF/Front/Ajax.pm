@@ -63,7 +63,7 @@ sub prepare_defaults {
 		ip        => $request->remote_ip,
 		lang      => $lang,
 		hostname  => $request->hostname,
-		path_info => decode_utf8($request->path),
+		path_info => $request->path,
 		form      => $form,
 		headers   => $request->headers,
 		scheme    => $request->scheme,

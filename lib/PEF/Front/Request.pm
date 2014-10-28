@@ -3,6 +3,8 @@ use strict;
 use warnings;
 use JSON;
 use Carp ();
+use utf8;
+use URI;
 use Encode;
 use PEF::Front::Headers;
 use PEF::Front::File;
@@ -23,7 +25,6 @@ sub port             { $_[0]->{env}{SERVER_PORT} }
 sub user             { $_[0]->{env}{REMOTE_USER} }
 sub request_uri      { $_[0]->{env}{REQUEST_URI} }
 sub path_info        { $_[0]->{env}{PATH_INFO} }
-sub path             { $_[0]->{env}{PATH_INFO} || '/' }
 sub query_string     { $_[0]->{env}{QUERY_STRING} }
 sub script_name      { $_[0]->{env}{SCRIPT_NAME} }
 sub scheme           { $_[0]->{env}{'psgi.url_scheme'} }
@@ -55,9 +56,29 @@ sub params {
 	$self->{params} = {%$q, %$p};
 }
 
+sub path {
+	my $self = $_[0];
+	return $self->{path} if @_ == 1 and exists $self->{path};
+	$self->{path} ||= decode_utf8($self->{env}{PATH_INFO} || '/');
+	if (@_ == 2) {
+		my $np = (utf8::is_utf8($_[1]) ? $_[1] : decode_utf8 $_[1]);
+		if ($np eq '') {
+			$self->{path} = '/';
+		} else {
+			if (substr ($np, 0, 1) ne '/') {
+				$self->{path} = substr ($self->{path}, rindex ($self->{path}, '/') + 1) . $np;
+			} else {
+				$self->{path} = $np;
+			}
+		}
+	}
+	return $self->{path};
+}
+
 sub param {
-	my ($self, $param) = @_;
-	return $self->params->{$param};
+	my ($self, $param, $value) = @_;
+	return $self->params->{$param} if not defined $value;
+	$self->params->{$param} = (utf8::is_utf8($value) ? $value : decode_utf8 $value);
 }
 
 sub hostname {
@@ -111,7 +132,7 @@ sub headers {
 		my $env = $self->{env};
 		$self->{headers} = PEF::Front::HTTPHeaders->new(
 			map {
-				(my $field = decode_utf8 $_) =~ s/^https?_//;
+				(my $field = decode_utf8 $_) =~ s/^HTTPS?_//;
 				($field => decode_utf8 $env->{$_});
 			  }
 			  grep {
