@@ -4,7 +4,6 @@ use warnings;
 use JSON;
 use Carp ();
 use utf8;
-use URI;
 use Encode;
 use PEF::Front::Headers;
 use PEF::Front::File;
