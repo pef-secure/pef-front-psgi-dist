@@ -68,8 +68,9 @@ sub import {
 
 	for my $method (@std_params) {
 		my $cref = "$modname"->can($method) || *{$mp . "::std_$method"};
-		*{$mp . "::$method"} = $cref;
-		*{$cp . "::$method"} = *{$mp . "::$method"};
+		*{$mp . "::$method"}      = $cref;
+		*{$cp . "::$method"}      = *{$mp . "::$method"};
+		*{$modname . "::$method"} = $cref if not "$modname"->can($method);
 	}
 	my $exports = \@{$modname . "::EXPORT"};
 	for my $e (@$exports) {
