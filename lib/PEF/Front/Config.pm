@@ -71,7 +71,7 @@ sub import {
 		*{$mp . "::$method"} = $cref;
 		*{$cp . "::$method"} = *{$mp . "::$method"};
 	}
-	my $exports = \@{"${$modname}::EXPORT"};
+	my $exports = \@{$modname . "::EXPORT"};
 	for my $e (@$exports) {
 		if ((my $cref = "$modname"->can($e))) {
 			*{$cp . "::$e"} = $cref;
