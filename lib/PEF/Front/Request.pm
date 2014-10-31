@@ -92,7 +92,9 @@ sub base {
 	my $self = $_[0];
 	return $self->{base} if exists $self->{base};
 	$self->{base} =
-	  $self->scheme . "://" . ($self->{env}{HTTP_HOST} || $self->{env}{SERVER_NAME}) . $self->request_uri;
+	    $self->scheme . "://"
+	  . ($self->{env}{HTTP_HOST} || $self->{env}{SERVER_NAME})
+	  . $self->request_uri;
 	$self->{base};
 }
 
@@ -106,7 +108,11 @@ sub cookies {
 		$pair =~ s/^\s+//;
 		$pair =~ s/\s+$//;
 		my ($key, $value) =
-		  map { tr/+/ /; s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg; decode_utf8 $_ } split ("=", $pair, 2);
+		  map {
+			tr/+/ /;
+			s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg;
+			decode_utf8 $_
+		  } split ("=", $pair, 2);
 		$results{$key} = $value;
 	}
 	$self->{cookies} = \%results;
@@ -157,27 +163,29 @@ sub _parse_request_body {
 		return;
 	}
 	return $self->{body_params} if exists $self->{body_params};
-	if (index ($ct, 'application/x-www-form-urlencoded') == 0) {
+	my $read_body_sub = sub {
 		$self->{raw_body} = '';
 		my $buffer;
 		while ($cl && $self->input->read($buffer, $cl)) {
 			$self->{raw_body} .= $buffer;
 			$cl -= length $buffer;
 		}
+	};
+	if (index ($ct, 'application/x-www-form-urlencoded') == 0) {
+		$read_body_sub->();
 		$self->{body_params} = _parse_urlencoded($self->{raw_body});
 	} elsif (index ($ct, 'application/json') == 0) {
-		$self->{raw_body} = '';
-		my $buffer;
-		while ($cl && $self->input->read($buffer, $cl)) {
-			$self->{raw_body} .= $buffer;
-			$cl -= length $buffer;
-		}
+		$read_body_sub->();
 		my $from_json = $self->{raw_body};
 		if (substr ($self->{raw_body}, 0, 2) eq '%7') {
 			$from_json =~ tr/+/ /;
 			$from_json =~ s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg;
 		}
 		$self->{body_params} = eval { decode_json $from_json} || {};
+		return $self->{body_params};
+	} elsif (index ($ct, 'application/xml') == 0) {
+		$read_body_sub->();
+		$self->{body_params} = eval { XMLin $self->{raw_body} } || {};
 		return $self->{body_params};
 	} elsif (index ($ct, 'multipart/form-data') == 0) {
 		$self->_parse_multipart_form;
@@ -204,7 +212,6 @@ sub _parse_multipart_form {
 	my $chl            = 65536;
 	my $lchnk          = 0;
 	my $current_field;
-
 	while (1) {
 		my $chunk;
 		my $start = index ($buffer, $start_boundary);
@@ -214,7 +221,6 @@ sub _parse_multipart_form {
 		$start = index ($buffer, $start_boundary) if $start == -1;
 		$start = index ($buffer, $end_boundary)   if $start == -1;
 		my $field_sub = sub {
-
 			if (   $buffer ne ''
 				&& $buffer =~ /^Content-Disposition:/
 				&& (my $body_start = index ($buffer, "\x0d\x0a\x0d\x0a")))
@@ -237,17 +243,19 @@ sub _parse_multipart_form {
 				if (defined ($file) && $file ne '') {
 					($file) = ($file =~ /([^\/\\:]*)$/);
 					$current_field = decode_utf8($name);
-					$form->{$current_field} = PEF::Front::File->new(
-						filename => decode_utf8($file),
-						size     => $cl,
-						content_type => $type || 'application/octet-stream', (
-							exists ($form->{$current_field . '_id'})
-							  && !ref ($form->{$current_field . '_id'})
-							? (
-								id => $self->remote_ip . "/" . $self->scheme . "/" . $self->hostname . "/" . $form->{$current_field . '_id'})
-							: ()
-						)
-					);
+					$form->{$current_field} =
+					  PEF::Front::File->new(filename => decode_utf8($file),
+											size     => $cl,
+											content_type => $type || 'application/octet-stream',
+											(exists ($form->{$current_field . '_id'})
+											   && !ref ($form->{$current_field . '_id'})
+											 ? (id => $self->remote_ip . "/"
+												. $self->scheme . "/"
+												. $self->hostname . "/"
+												. $form->{$current_field . '_id'})
+											 : ()
+											)
+					  );
 					$current_field = $form->{$current_field};
 					$current_field->append($current_value);
 				} else {
@@ -262,7 +270,10 @@ sub _parse_multipart_form {
 		if ($start >= 0) {
 			last if (my $end = index ($buffer, $end_boundary)) == 0;
 			my $be = $end == $start ? 2 : 0;
-			if (defined $current_field and ref $current_field eq 'PEF::Front::File' and $start > 1) {
+			if (    defined $current_field
+				and ref $current_field eq 'PEF::Front::File'
+				and $start > 1)
+			{
 				$current_field->append(substr ($buffer, 0, $start - 2));
 				$current_field->finish;
 				$current_field = undef;
