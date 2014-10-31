@@ -243,7 +243,7 @@ sub make_cookie_parser {
 			$ret .= "\t\t" . quote_var($pn) . ' => ' . make_value_parser($value->{$pn}) . ",\n";
 		}
 	}
-	$ret .= "\t\t(\$defaults->{scheme} eq 'https'?(secure => 1): ()),\n";
+	$ret .= "\t\t(\$defaults->{scheme} eq 'https'?(secure => 1): ()),\n" if not exists $value->{secure};
 	$ret .= qq~\t});\n~;
 	return $ret;
 }
