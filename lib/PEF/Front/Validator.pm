@@ -237,13 +237,13 @@ sub make_cookie_parser {
 	$value = {value => $value} if not ref $value;
 	$name = quote_var($name);
 	$value->{path} = '/' if not $value->{path};
-	$value->{secure} = "TT defaults.scheme eq 'https'" if not $value->{secure};
 	my $ret = qq~\t\$http_response->set_cookie($name, {\n~;
 	for my $pn (qw/value expires domain path secure max-age httponly/) {
 		if (exists $value->{$pn}) {
 			$ret .= "\t\t" . quote_var($pn) . ' => ' . make_value_parser($value->{$pn}) . ",\n";
 		}
 	}
+	$ret .= "\t\t(\$defaults->{scheme} eq 'https'?(secure => 1): ()),\n";
 	$ret .= qq~\t});\n~;
 	return $ret;
 }
