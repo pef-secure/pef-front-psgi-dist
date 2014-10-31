@@ -218,7 +218,7 @@ sub make_value_parser {
 	my $ret   = quote_var($value);
 	if (substr ($value, 0, 3) eq 'TT ') {
 		my $exp = substr ($value, 3);
-		$exp =~ quote_var($exp);
+		$exp = quote_var($exp);
 		substr ($exp, 0,  1, '') if substr ($exp, 0,  1) eq "'";
 		substr ($exp, -1, 1, '') if substr ($exp, -1, 1) eq "'";
 		$ret = qq~do {
