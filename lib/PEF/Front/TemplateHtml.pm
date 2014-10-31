@@ -27,7 +27,6 @@ sub handler {
 	my $lang = $defaults->{lang};
 	$http_response->set_cookie(lang => $lang);
 	my $template = delete $defaults->{method};
-	$template = decode_utf8($template);
 	$template =~ tr/ /_/;
 	my $template_file = "$template.html";
 	if (!-f template_dir($request->hostname, $lang) . "/" . $template_file) {
