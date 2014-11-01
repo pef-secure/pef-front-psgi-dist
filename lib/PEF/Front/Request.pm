@@ -7,6 +7,7 @@ use utf8;
 use Encode;
 use PEF::Front::Headers;
 use PEF::Front::File;
+use XML::Simple;
 
 sub new {
 	my ($class, $env) = @_;
