@@ -318,7 +318,7 @@ sub build_result_processor {
 	  . "\tmy \%rc = (\n";
 	my %rc_array;
 	for my $rc (keys %{$result_rules}) {
-		$result_sub .= "\t" . quote_var($rc) . " => " . make_rules_parser($result_rules->{$rc}) . ",\n";
+		$result_sub .= "\t" . quote_var($rc) . " => " . make_rules_parser($result_rules->{$rc} || {}) . ",\n";
 	}
 	$result_sub .=
 	    "\t);\n"
@@ -436,7 +436,7 @@ sub validate {
 			}
 			$cache{$method}{model} = $model;
 			if (exists $new_rules->{result}) {
-				$cache{$method}{result_sub} = build_result_processor($new_rules->{result});
+				$cache{$method}{result_sub} = build_result_processor($new_rules->{result} || {});
 			}
 		}
 		$cache{$method}{modified} = $stats[9];
