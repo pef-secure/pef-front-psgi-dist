@@ -16,7 +16,6 @@ our @EXPORT = qw{
   get_method_attrs
 };
 my %cache;
-
 #{
 #	ajax => {
 #		$method => {
@@ -49,7 +48,7 @@ sub build_validator {
 		}
 		if (!ref ($mr)) {
 			$validator_sub .=
-			    "croak {result => 'BADPARAM', answer => 'Mandatory parameter \$1 is absent', "
+			  "croak {result => 'BADPARAM', answer => 'Mandatory parameter \$1 is absent', "
 			  . "answer_args => ['param-$pr']} "
 			  . "unless exists $jsn {$pr} ;\n";
 			$validator_sub .=
@@ -68,12 +67,17 @@ sub build_validator {
 			}
 			if (exists ($mr->{filter})) {
 				if ($mr->{filter} =~ /^\w+::/) {
-					$sub_test .= "$jsn {$pr} = " . app_namespace . "InFilter::$mr->{filter}($jsn {$pr}, \$_[1]);\n";
+					$sub_test .=
+					    "$jsn {$pr} = "
+					  . app_namespace
+					  . "InFilter::$mr->{filter}($jsn {$pr}, \$_[1]);\n";
 					my $cl = app_namespace . "InFilter::$mr->{filter}";
 					push @add_use, substr ($cl, 0, rindex ($cl, "::"));
 				} else {
 					my $rearr =
-					  ref ($mr->{filter}) eq 'ARRAY' ? $mr->{filter} : ref ($mr->{filter}) ? [] : [$mr->{filter}];
+					    ref ($mr->{filter}) eq 'ARRAY' ? $mr->{filter}
+					  : ref ($mr->{filter})            ? []
+					  :                                  [$mr->{filter}];
 					for my $re (@$rearr) {
 						$sub_test .= "$jsn {$pr} =~ $re;\n" if $re =~ /^(s|tr|y)\b/;
 					}
@@ -164,17 +168,19 @@ sub build_validator {
 					}
 				} else {
 					$check_defaults .= ' and' if $check_defaults;
-					$validator_sub .= "$jsn {$pr} = $default if $check_defaults not exists $jsn {$pr};\n";
+					$validator_sub .=
+					  "$jsn {$pr} = $default if $check_defaults not exists $jsn {$pr};\n";
 				}
 			}
 			if (exists ($mr->{optional}) && $mr->{optional} eq 'empty') {
-				$validator_sub .= "if(exists($jsn {$pr}) and $jsn {$pr} ne '') {\n$sub_test\n}\n";
+				$validator_sub .=
+				  "if(exists($jsn {$pr}) and $jsn {$pr} ne '') {\n$sub_test\n}\n";
 			} elsif (exists ($mr->{optional}) && $mr->{optional}) {
 				$validator_sub .= "if(exists($jsn {$pr})) {\n$sub_test\n}\n";
 			} else {
 				$must_params{$pr} = undef;
 				$validator_sub .=
-				    "croak {result => 'BADPARAM', answer => 'Mandatory parameter \$1 is absent', "
+				  "croak {result => 'BADPARAM', answer => 'Mandatory parameter \$1 is absent', "
 				  . "answer_args => ['param-$pr']} "
 				  . "unless exists $jsn {$pr} ;\n";
 				$validator_sub .= $sub_test;
@@ -219,8 +225,10 @@ sub make_value_parser {
 	if (substr ($value, 0, 3) eq 'TT ') {
 		my $exp = substr ($value, 3);
 		$exp = quote_var($exp);
-		substr ($exp, 0,  1, '') if substr ($exp, 0,  1) eq "'";
-		substr ($exp, -1, 1, '') if substr ($exp, -1, 1) eq "'";
+		if (substr ($exp, 0, 1) eq "'") {
+			substr ($exp, 0,  1, '');
+			substr ($exp, -1, 1, '');
+		}
 		$ret = qq~do {
 			my \$tmpl = '[% $exp %]';
 			my \$out;
@@ -240,10 +248,12 @@ sub make_cookie_parser {
 	my $ret = qq~\t\$http_response->set_cookie($name, {\n~;
 	for my $pn (qw/value expires domain path secure max-age httponly/) {
 		if (exists $value->{$pn}) {
-			$ret .= "\t\t" . quote_var($pn) . ' => ' . make_value_parser($value->{$pn}) . ",\n";
+			$ret .=
+			  "\t\t" . quote_var($pn) . ' => ' . make_value_parser($value->{$pn}) . ",\n";
 		}
 	}
-	$ret .= "\t\t(\$defaults->{scheme} eq 'https'?(secure => 1): ()),\n" if not exists $value->{secure};
+	$ret .= "\t\t(\$defaults->{scheme} eq 'https'?(secure => 1): ()),\n"
+	  if not exists $value->{secure};
 	$ret .= qq~\t});\n~;
 	return $ret;
 }
@@ -258,7 +268,10 @@ sub make_rules_parser {
 			$redir = [$redir] if 'ARRAY' ne ref $redir;
 			my $rw = "\t{\n";
 			for my $r (@$redir) {
-				$rw .= "\t\t\$new_location = " . make_value_parser($r) . ";\n\t\tlast if \$new_location;\n";
+				$rw .=
+				    "\t\t\$new_location = "
+				  . make_value_parser($r)
+				  . ";\n\t\tlast if \$new_location;\n";
 			}
 			$rw .= "\t}\n";
 			$sub_int .= $rw;
@@ -275,12 +288,14 @@ sub make_rules_parser {
 		} elsif ($cmd eq 'add-header') {
 			for my $h (keys %{$start->{$cmd}}) {
 				my $value = make_value_parser($start->{$cmd}{$h});
-				$sub_int .= qq~\t\$http_response->add_header(~ . quote_var($h) . qq~, $value);\n~;
+				$sub_int .=
+				  qq~\t\$http_response->add_header(~ . quote_var($h) . qq~, $value);\n~;
 			}
 		} elsif ($cmd eq 'set-header') {
 			for my $h (keys %{$start->{$cmd}}) {
 				my $value = make_value_parser($start->{$cmd}{$h});
-				$sub_int .= qq~\t\$http_response->set_header(~ . quote_var($h) . qq~, $value);\n~;
+				$sub_int .=
+				  qq~\t\$http_response->set_header(~ . quote_var($h) . qq~, $value);\n~;
 			}
 		} elsif ($cmd eq 'filter') {
 			my $full_func;
@@ -303,7 +318,8 @@ sub make_rules_parser {
 			  . qq~\t\t\$response = {result => 'INTERR', answer => 'Bad output filter'};\n\t\treturn;~
 			  . qq~\n\t}\n~;
 		} elsif ($cmd eq 'answer') {
-			$sub_int .= qq~\t\$response->{answer} = ~ . make_value_parser($start->{$cmd}) . qq~;\n~;
+			$sub_int .=
+			  qq~\t\$response->{answer} = ~ . make_value_parser($start->{$cmd}) . qq~;\n~;
 		}
 	}
 	$sub_int .= "\t}";
@@ -313,12 +329,14 @@ sub make_rules_parser {
 sub build_result_processor {
 	my $result_rules = $_[0];
 	my $result_sub =
-	    "sub {\n\tmy (\$response, \$defaults, \$stash, \$http_response, \$tt, \$logger) = \@_;\n"
+	  "sub {\n\tmy (\$response, \$defaults, \$stash, \$http_response, \$tt, \$logger) = \@_;\n"
 	  . "\tmy \$new_location;\n"
 	  . "\tmy \%rc = (\n";
 	my %rc_array;
 	for my $rc (keys %{$result_rules}) {
-		$result_sub .= "\t" . quote_var($rc) . " => " . make_rules_parser($result_rules->{$rc} || {}) . ",\n";
+		$result_sub .= "\t"
+		  . quote_var($rc) . " => "
+		  . make_rules_parser($result_rules->{$rc} || {}) . ",\n";
 	}
 	$result_sub .=
 	    "\t);\n"
@@ -340,8 +358,8 @@ sub validate {
 	my $json     = $_[0];
 	my $defaults = $_[1];
 	my $method   = $json->{method}
-	  or croak({
-			result => 'INTERR',
+	  or croak(
+		{   result => 'INTERR',
 			answer => 'Unknown method'
 		}
 	  );
@@ -356,7 +374,6 @@ sub validate {
 	} if !@stats;
 	my $base_file = model_dir . "/-base-.yaml";
 	my @bfs       = stat ($base_file);
-
 	if (@bfs
 		&& (!exists ($cache{'-base-'}) || $cache{'-base-'}{modified} != $bfs[9]))
 	{
@@ -436,7 +453,8 @@ sub validate {
 			}
 			$cache{$method}{model} = $model;
 			if (exists $new_rules->{result}) {
-				$cache{$method}{result_sub} = build_result_processor($new_rules->{result} || {});
+				$cache{$method}{result_sub} =
+				  build_result_processor($new_rules->{result} || {});
 			}
 		}
 		$cache{$method}{modified} = $stats[9];
