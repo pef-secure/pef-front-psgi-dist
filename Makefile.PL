@@ -1,5 +1,4 @@
 use ExtUtils::MakeMaker;
-
 WriteMakefile(
 	NAME        => "PEF::Front",
 	AUTHOR      => "Pef Secure",
@@ -35,17 +34,14 @@ WriteMakefile(
 		'URI::Escape'           => 1,
 		'utf8'                  => 1,
 		'warnings'              => 1,
+		'XML::Simple'           => "2",
 		'YAML::XS'              => "0.41",
 	},
-
 	dist => {
 		DIST_DEFAULT => 'all tardist',
 		COMPRESS     => 'gzip -vf',
 		SUFFIX       => '.gz',
 	},
-
-	clean => {FILES => '*~',},
-
+	clean     => {FILES => '*~',},
 	realclean => {FILES => '*~',},
 );
-
