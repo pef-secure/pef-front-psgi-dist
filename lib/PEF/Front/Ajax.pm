@@ -70,6 +70,7 @@ sub prepare_defaults {
 		cookies   => $cookies,
 		method    => $method,
 		src       => $src,
+		request   => $request,
 	};
 }
 
