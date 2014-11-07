@@ -18,7 +18,6 @@ sub normalize_path {
 		return substr ($path, 0, -1);
 	}
 }
-
 my @std_params = qw{
   template_dir
   upload_dir
@@ -29,6 +28,7 @@ my @std_params = qw{
   cache_file
   cache_size
   cache_expire
+  cookie_unset_negative_expire
   www_static_dir
   www_static_captchas_dir
   in_filter_dir
@@ -65,7 +65,6 @@ sub import {
 	my $mp = __PACKAGE__;
 	my $cp = caller;
 	no strict 'refs';
-
 	for my $method (@std_params) {
 		my $cref = "$modname"->can($method) || *{$mp . "::std_$method"};
 		*{$mp . "::$method"}      = $cref;
@@ -78,7 +77,6 @@ sub import {
 			*{$cp . "::$e"} = $cref;
 		}
 	}
-
 	if ("$modname"->can("project_dir")) {
 		$project_dir = normalize_path("$modname"->project_dir);
 	} else {
@@ -87,7 +85,6 @@ sub import {
 		$project_dir = $lpath;
 	}
 }
-
 sub std_no_nls               { 0 }
 sub std_model_rpc_admin_port { 5500 }
 sub std_model_rpc_site_port  { 4500 }
@@ -107,34 +104,34 @@ sub std_model_rpc {
 		);
 	}
 }
-
-sub std_template_cache             { "$project_dir/var/tt_cache" }
-sub std_location_error             { "/appError?msgid=Internal\%20Error" }
-sub std_db_reconnect_trys          { 30 }
-sub std_no_multilang_support       { 1 }
-sub std_default_lang               { 'en' }
-sub std_url_contains_lang          { 0 }
-sub std_template_dir_contains_lang { 0 }
-sub std_app_namespace              { $app_namespace }
-sub std_in_filter_dir              { "$app_conf_dir/InFilter" }
-sub std_model_local_dir            { "$app_conf_dir/Local" }
-sub std_out_filter_dir             { "$app_conf_dir/OutFilter" }
-sub std_upload_dir                 { "$project_dir/var/upload" }
-sub std_captcha_db                 { "$project_dir/var/captcha-db" }
-sub std_captcha_font               { "giant" }
-sub std_captcha_secret             { "very secret" }
-sub std_cache_file                 { "$project_dir/var/cache/shared.cache" }
-sub std_cache_size                 { "8m" }
-sub std_cache_expire               { "1h" }
-sub std_model_dir                  { "$project_dir/model" }
-sub std_www_static_dir             { "$project_dir/www-static" }
-sub std_www_static_captchas_dir    { "$project_dir/www-static/captchas" }
-sub std_db_user                    { "pef" }
-sub std_db_password                { "pef-pass" }
-sub std_db_name                    { "pef" }
-
+sub std_template_cache               { "$project_dir/var/tt_cache" }
+sub std_location_error               { "/appError?msgid=Internal\%20Error" }
+sub std_db_reconnect_trys            { 30 }
+sub std_no_multilang_support         { 1 }
+sub std_default_lang                 { 'en' }
+sub std_url_contains_lang            { 0 }
+sub std_template_dir_contains_lang   { 0 }
+sub std_app_namespace                { $app_namespace }
+sub std_in_filter_dir                { "$app_conf_dir/InFilter" }
+sub std_model_local_dir              { "$app_conf_dir/Local" }
+sub std_out_filter_dir               { "$app_conf_dir/OutFilter" }
+sub std_upload_dir                   { "$project_dir/var/upload" }
+sub std_captcha_db                   { "$project_dir/var/captcha-db" }
+sub std_captcha_font                 { "giant" }
+sub std_captcha_secret               { "very secret" }
+sub std_cache_file                   { "$project_dir/var/cache/shared.cache" }
+sub std_cache_size                   { "8m" }
+sub std_cache_expire                 { "1h" }
+sub std_model_dir                    { "$project_dir/model" }
+sub std_www_static_dir               { "$project_dir/www-static" }
+sub std_www_static_captchas_dir      { "$project_dir/www-static/captchas" }
+sub std_db_user                      { "pef" }
+sub std_db_password                  { "pef-pass" }
+sub std_db_name                      { "pef" }
+sub std_cookie_unset_negative_expire { -3600 }
 sub std_template_dir {
-	template_dir_contains_lang() ? "$project_dir/templates/$_[1]" : "$project_dir/templates";
+	template_dir_contains_lang()
+	  ? "$project_dir/templates/$_[1]"
+	  : "$project_dir/templates";
 }
-
 1;
