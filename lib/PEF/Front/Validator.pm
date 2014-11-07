@@ -284,8 +284,8 @@ sub make_rules_parser {
 			if (ref ($unset) eq 'HASH') {
 				for my $c (keys %$unset) {
 					my $ca = {%{$start->{$cmd}{$c}}};
-					$c->{expires} = -3600 if not exists $c->{expires};
-					$c->{value}   = ''    if not exists $c->{value};
+					$ca->{expires} = -3600 if not exists $ca->{expires};
+					$ca->{value}   = ''    if not exists $ca->{value};
 					$sub_int .= make_cookie_parser($c => $ca);
 				}
 			} else {
