@@ -281,9 +281,18 @@ sub make_rules_parser {
 			}
 		} elsif ($cmd eq 'unset-cookie') {
 			my $unset = $start->{$cmd};
-			$unset = [$unset] if not ref $unset;
-			for my $c (@$unset) {
-				$sub_int .= make_cookie_parser($c => {value => '', expires => -3600});
+			if (ref ($unset) eq 'HASH') {
+				for my $c (keys %$unset) {
+					my $ca = {%{$start->{$cmd}{$c}}};
+					$c->{expires} = -3600 if not exists $c->{expires};
+					$c->{value}   = ''    if not exists $c->{value};
+					$sub_int .= make_cookie_parser($c => $ca);
+				}
+			} else {
+				$unset = [$unset] if not ref $unset;
+				for my $c (@$unset) {
+					$sub_int .= make_cookie_parser($c => {value => '', expires => -3600});
+				}
 			}
 		} elsif ($cmd eq 'add-header') {
 			for my $h (keys %{$start->{$cmd}}) {
