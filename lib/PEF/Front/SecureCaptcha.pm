@@ -16,12 +16,12 @@ sub new {
 	my $self = {
 		width          => 25,
 		height         => 34,
-		data_folder    => captcha_db,
-		output_folder  => www_static_captchas_dir,
+		data_folder    => cfg_captcha_db,
+		output_folder  => cfg_www_static_captchas_dir,
 		expire         => 300,
-		font           => captcha_font,
+		font           => cfg_captcha_font,
 		symbols        => ["0" .. "9", split //, "abCdEFgHiJKLMNOPqRSTUVWXyZz"],
-		security_shift => captcha_secret
+		security_shift => cfg_captcha_secret
 	};
 	for (qw{width height data_folder output_folder expire font symbols security_shift}) {
 		$self->{$_} = $args{$_} if exists $args{$_};

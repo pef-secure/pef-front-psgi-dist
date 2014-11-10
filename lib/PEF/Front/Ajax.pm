@@ -20,18 +20,18 @@ sub prepare_defaults {
 	my $cookies = $request->cookies;
 	my $lang;
 	my ($src, $method, $params);
-	if (url_contains_lang) {
+	if (cfg_url_contains_lang) {
 		($lang, $src, $method, $params) = $request->path =~ m{^/([\w][\w])/(app|ajax|submit|get)([^/]+)/?(.*)$};
 		if (not defined $lang) {
 			my $http_response = PEF::Front::Response->new(base => $request->base);
-			$http_response->redirect(location_error, 301);
+			$http_response->redirect(cfg_location_error, 301);
 			return $http_response;
 		}
 	} else {
 		($src, $method, $params) = $request->path =~ m{^/(app|ajax|submit|get)([^/]+)/?(.*)$};
 		if (not defined $method) {
 			my $http_response = PEF::Front::Response->new(base => $request->base);
-			$http_response->redirect(location_error, 301);
+			$http_response->redirect(cfg_location_error, 301);
 			return $http_response;
 		}
 		$lang = guess_lang($request);
@@ -125,7 +125,7 @@ sub ajax {
 				my $class = substr ($model, 0, rindex ($model, "::"));
 				eval "use $class;\n\$response = $model(\$vreq, \$defaults)";
 			} else {
-				$response = model_rpc($model)->send_message($vreq)->recv_message;
+				$response = cfg_model_rpc($model)->send_message($vreq)->recv_message;
 			}
 			if ($@) {
 				$logger->({level => "error", message => "error: " . Dumper($model, $@, $vreq)});
@@ -147,7 +147,7 @@ sub ajax {
 				result   => $response->{result},
 			};
 			my $tt = Template::Alloy->new(
-				COMPILE_DIR => template_cache,
+				COMPILE_DIR => cfg_template_cache,
 				V2EQUALS    => 0,
 				ENCODING    => "UTF-8"
 			);

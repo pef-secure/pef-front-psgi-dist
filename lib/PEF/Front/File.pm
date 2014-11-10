@@ -7,7 +7,7 @@ use PEF::Front::Cache;
 
 sub new {
 	my ($class, %args) = @_;
-	my $upload_path = upload_dir . "/$$";
+	my $upload_path = cfg_upload_dir . "/$$";
 	if (!-d $upload_path) {
 		mkdir $upload_path, 0700;
 	}

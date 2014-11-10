@@ -17,11 +17,11 @@ my $cache;
 
 BEGIN {
 	$cache = Cache::FastMmap->new(
-		share_file     => cache_file(),
-		cache_size     => cache_size(),
+		share_file     => cfg_cache_file(),
+		cache_size     => cfg_cache_size(),
 		empty_on_exit  => 0,
 		unlink_on_exit => 0,
-		expire_time    => cache_expire(),
+		expire_time    => cfg_cache_expire(),
 		init_file      => 1
 	) or die "Can't create cache: $!";
 }

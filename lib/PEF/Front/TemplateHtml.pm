@@ -29,7 +29,7 @@ sub handler {
 	my $template = delete $defaults->{method};
 	$template =~ tr/ /_/;
 	my $template_file = "$template.html";
-	if (!-f template_dir($request->hostname, $lang) . "/" . $template_file) {
+	if (!-f cfg_template_dir($request->hostname, $lang) . "/" . $template_file) {
 		$log->({level => "debug", message => " template '$template_file' not found"});
 		$http_response->status(404);
 		return $http_response->response();
@@ -81,7 +81,7 @@ sub handler {
 					my $class = substr ($model, 0, rindex ($model, "::"));
 					eval "use $class;\n\$response = $model(\$vreq)";
 				} else {
-					$response = model_rpc($model)->send_message($vreq)->recv_message;
+					$response = cfg_model_rpc($model)->send_message($vreq)->recv_message;
 				}
 				if ($@) {
 					$log->({level => "debug", message => "error: " . Dumper($model, $@, $vreq)});
@@ -95,8 +95,8 @@ sub handler {
 		return $response;
 	};
 	my $tt = Template::Alloy->new(
-		INCLUDE_PATH => [template_dir($request->hostname, $lang)],
-		COMPILE_DIR  => template_cache,
+		INCLUDE_PATH => [cfg_template_dir($request->hostname, $lang)],
+		COMPILE_DIR  => cfg_template_cache,
 		V2EQUALS     => 0,
 		ENCODING     => 'UTF-8',
 

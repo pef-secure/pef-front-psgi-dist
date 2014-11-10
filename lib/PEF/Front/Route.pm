@@ -129,7 +129,7 @@ sub to_app {
 		my $request  = PEF::Front::Request->new($_[0]);
 		my $response = rewrite($request);
 		return $response->response() if $response;
-		if (url_contains_lang && (substr ($request->path, 0, 1) ne '/' || substr ($request->path, 0, 3) ne '/')) {
+		if (cfg_url_contains_lang && (substr ($request->path, 0, 1) ne '/' || substr ($request->path, 0, 3) ne '/')) {
 			my $lang = guess_lang($request);
 			if ($request->method eq 'GET') {
 				my $http_response = PEF::Front::Response->new(base => $request->base);
@@ -139,7 +139,7 @@ sub to_app {
 				$request->path("/$lang" . $request->path);
 			}
 		}
-		my $lang_offset = (url_contains_lang) ? 3 : 0;
+		my $lang_offset = cfg_url_contains_lang ? 3 : 0;
 		if (substr ($request->path, $lang_offset, 4) eq '/app') {
 			return PEF::Front::TemplateHtml::handler($request);
 		} elsif (substr ($request->path, $lang_offset, 5) eq '/ajax'

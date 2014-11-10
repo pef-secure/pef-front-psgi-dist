@@ -17,7 +17,7 @@ sub msg_peek {
 	my $found = 1;
 	my $id_nls_msgid;
 	my $message;
-	if (no_nls) {
+	if (cfg_no_nls) {
 		$message      = $msgid;
 	} else {
 		$conn->run(
@@ -57,13 +57,13 @@ sub msg_get {
 	my ($lang, $msgid, @params) = @_;
 	my $ret = msg_peek($lang, $msgid);
 	if (not $ret->{found}) {
-		if (not no_multilang_support and defined $ret->{id_nls_msgid}) {
+		if (not cfg_no_multilang_support and defined $ret->{id_nls_msgid}) {
 			my ($alt_lang) = db_connect->run(
 				sub {
 					$_->selectrow_array(q{select alt_lang from language where short_lang = ?}, undef, $lang);
 				}
 			);
-			$alt_lang ||= default_lang;
+			$alt_lang ||= cfg_default_lang;
 			$ret = msg_peek($lang, $msgid);
 		}
 		$ret->{message} = $msgid if not $ret->{found};
@@ -79,8 +79,8 @@ sub guess_lang {
 	my $request    = $_[0];
 	my $cookie_ref = $request->cookies;
 	my $lang       = (exists($cookie_ref->{'lang'}) ? $cookie_ref->{'lang'} : undef);
-	if (no_multilang_support and not defined $lang) {
-		$lang = default_lang;
+	if (cfg_no_multilang_support and not defined $lang) {
+		$lang = cfg_default_lang;
 	} elsif (not defined $lang) {
 		my $country = lc(($gi->LookUp($ENV{'REMOTE_ADDR'}))[0]);
 		if (defined $country) {
@@ -90,7 +90,7 @@ sub guess_lang {
 				}
 			);
 		}
-		$lang = default_lang if not defined $lang;
+		$lang = cfg_default_lang if not defined $lang;
 	}
 	return $lang;
 }

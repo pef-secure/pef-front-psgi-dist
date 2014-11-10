@@ -18,39 +18,40 @@ sub normalize_path {
 		return substr ($path, 0, -1);
 	}
 }
+
 my @std_params = qw{
-  template_dir
-  upload_dir
-  captcha_db
-  captcha_font
-  captcha_secret
-  model_dir
-  cache_file
-  cache_size
-  cache_expire
-  cookie_unset_negative_expire
-  www_static_dir
-  www_static_captchas_dir
-  in_filter_dir
-  out_filter_dir
-  db_user
-  db_password
-  db_name
-  db_reconnect_trys
-  model_rpc_admin_port
-  model_rpc_site_port
-  model_rpc_admin_addr
-  model_rpc_site_addr
-  model_rpc
-  model_local_dir
-  app_namespace
-  default_lang
-  url_contains_lang
-  template_dir_contains_lang
-  no_multilang_support
-  location_error
-  template_cache
-  no_nls
+  cfg_template_dir
+  cfg_upload_dir
+  cfg_captcha_db
+  cfg_captcha_font
+  cfg_captcha_secret
+  cfg_model_dir
+  cfg_cache_file
+  cfg_cache_size
+  cfg_cache_expire
+  cfg_cookie_unset_negative_expire
+  cfg_www_static_dir
+  cfg_www_static_captchas_dir
+  cfg_in_filter_dir
+  cfg_out_filter_dir
+  cfg_db_user
+  cfg_db_password
+  cfg_db_name
+  cfg_db_reconnect_trys
+  cfg_model_rpc_admin_port
+  cfg_model_rpc_site_port
+  cfg_model_rpc_admin_addr
+  cfg_model_rpc_site_addr
+  cfg_model_rpc
+  cfg_model_local_dir
+  cfg_app_namespace
+  cfg_default_lang
+  cfg_url_contains_lang
+  cfg_template_dir_contains_lang
+  cfg_no_multilang_support
+  cfg_location_error
+  cfg_template_cache
+  cfg_no_nls
 };
 
 sub import {
@@ -66,7 +67,8 @@ sub import {
 	my $cp = caller;
 	no strict 'refs';
 	for my $method (@std_params) {
-		my $cref = "$modname"->can($method) || *{$mp . "::std_$method"};
+		(my $bmn = $method) =~ s/^cfg_//;
+		my $cref = "$modname"->can($method) || *{$mp . "::std_$bmn"};
 		*{$mp . "::$method"}      = $cref;
 		*{$cp . "::$method"}      = *{$mp . "::$method"};
 		*{$modname . "::$method"} = $cref if not "$modname"->can($method);
@@ -81,7 +83,7 @@ sub import {
 		$project_dir = normalize_path("$modname"->project_dir);
 	} else {
 		my $lpath = $FindBin::Bin;
-		$lpath =~ s'(/conf/?$|/bin/?$)'';
+		$lpath =~ s'(/app$|/conf$|/bin$)'';
 		$project_dir = $lpath;
 	}
 }
@@ -94,13 +96,13 @@ sub std_model_rpc_site_addr  { '172.16.0.1' }
 sub std_model_rpc {
 	if ($_[0] eq 'admin' || $_[0] eq 'rpc_admin') {
 		return PEF::Front::RPC->new(
-			'Addr' => model_rpc_admin_addr(),
-			'Port' => model_rpc_admin_port(),
+			'Addr' => cfg_model_rpc_admin_addr(),
+			'Port' => cfg_model_rpc_admin_port(),
 		);
 	} else {
 		return PEF::Front::RPC->new(
-			'Addr' => model_rpc_site_addr(),
-			'Port' => model_rpc_site_port(),
+			'Addr' => cfg_model_rpc_site_addr(),
+			'Port' => cfg_model_rpc_site_port(),
 		);
 	}
 }
@@ -129,8 +131,9 @@ sub std_db_user                      { "pef" }
 sub std_db_password                  { "pef-pass" }
 sub std_db_name                      { "pef" }
 sub std_cookie_unset_negative_expire { -3600 }
+
 sub std_template_dir {
-	template_dir_contains_lang()
+	cfg_template_dir_contains_lang()
 	  ? "$project_dir/templates/$_[1]"
 	  : "$project_dir/templates";
 }

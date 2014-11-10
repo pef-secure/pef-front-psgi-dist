@@ -69,9 +69,9 @@ sub build_validator {
 				if ($mr->{filter} =~ /^\w+::/) {
 					$sub_test .=
 					    "$jsn {$pr} = "
-					  . app_namespace
+					  . cfg_app_namespace
 					  . "InFilter::$mr->{filter}($jsn {$pr}, \$_[1]);\n";
-					my $cl = app_namespace . "InFilter::$mr->{filter}";
+					my $cl = cfg_app_namespace . "InFilter::$mr->{filter}";
 					push @add_use, substr ($cl, 0, rindex ($cl, "::"));
 				} else {
 					my $rearr =
@@ -284,7 +284,7 @@ sub make_rules_parser {
 			if (ref ($unset) eq 'HASH') {
 				for my $c (keys %$unset) {
 					my $ca = {%{$start->{$cmd}{$c}}};
-					$ca->{expires} = cookie_unset_negative_expire
+					$ca->{expires} = cfg_cookie_unset_negative_expire
 					  if not exists $ca->{expires};
 					$ca->{value} = '' if not exists $ca->{value};
 					$sub_int .= make_cookie_parser($c => $ca);
@@ -295,7 +295,7 @@ sub make_rules_parser {
 					$sub_int .= make_cookie_parser(
 						$c => {
 							value   => '',
-							expires => cookie_unset_negative_expire
+							expires => cfg_cookie_unset_negative_expire
 						}
 					);
 				}
@@ -323,8 +323,8 @@ sub make_rules_parser {
 				$full_func = $start->{$cmd};
 				$use_class = substr ($full_func, 0, rindex ($full_func, "::"));
 				(my $clf = $use_class) =~ s|::|/|g;
-				$full_func = app_namespace . "OutFilter::$full_func";
-				my $mrf = out_filter_dir . "/$clf.pm";
+				$full_func = cfg_app_namespace . "OutFilter::$full_func";
+				my $mrf = cfg_out_filter_dir . "/$clf.pm";
 				$sub_int .= qq~\teval {require '$mrf'; $full_func(\$response, \$defaults)};\n~;
 			}
 			$sub_int .=
@@ -381,13 +381,13 @@ sub validate {
 	my $mrf = $method;
 	$mrf =~ s/ ([[:lower:]])/\u$1/g;
 	$mrf = ucfirst ($mrf);
-	my $rules_file = model_dir . "/$mrf.yaml";
+	my $rules_file = cfg_model_dir . "/$mrf.yaml";
 	my @stats      = stat ($rules_file);
 	croak {
 		result => 'INTERR',
 		answer => 'Unknown rules file'
 	} if !@stats;
-	my $base_file = model_dir . "/-base-.yaml";
+	my $base_file = cfg_model_dir . "/-base-.yaml";
 	my @bfs       = stat ($base_file);
 	if (@bfs
 		&& (!exists ($cache{'-base-'}) || $cache{'-base-'}{modified} != $bfs[9]))
@@ -460,7 +460,7 @@ sub validate {
 					if ($new_rules->{model} =~ /^PEF::Front/) {
 						$model = $new_rules->{model};
 					} else {
-						$model = app_namespace . "Local::$new_rules->{model}";
+						$model = cfg_app_namespace . "Local::$new_rules->{model}";
 					}
 				} else {
 					$model = $new_rules->{model};
