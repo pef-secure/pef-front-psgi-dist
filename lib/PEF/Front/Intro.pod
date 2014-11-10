@@ -12,7 +12,6 @@ PEF::Front framework implemets MVC model in a non-standard way. Main goals are:
   * Explicit model method descriptin
   * Better job separation
   * Less code duplication
-  * Speed
   * Convenience
 
 =back
@@ -102,6 +101,8 @@ And finally, in some defined place is App::Local::News perl module with method g
   * Explicit model methods description with input validation
   * Fast and versatile template engine Template::Alloy
   * Allowed model methods are accessible from any template 
+  * Better job separation
+  * Less code duplication
 
 =back
 

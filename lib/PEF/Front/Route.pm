@@ -139,7 +139,7 @@ sub to_app {
 				$request->path("/$lang" . $request->path);
 			}
 		}
-		my $lang_offset = cfg_url_contains_lang ? 3 : 0;
+		my $lang_offset = (cfg_url_contains_lang) ? 3 : 0;
 		if (substr ($request->path, $lang_offset, 4) eq '/app') {
 			return PEF::Front::TemplateHtml::handler($request);
 		} elsif (substr ($request->path, $lang_offset, 5) eq '/ajax'
