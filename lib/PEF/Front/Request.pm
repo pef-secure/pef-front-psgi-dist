@@ -353,15 +353,13 @@ Unless otherwise noted, all methods and attributes are B<read-only>,
 and passing values to the method like an accessor doesn't work like
 you expect it to.
 
-=head2 new
+=over 4
+
+=item new
 
     PEF::Front::Request->new( $env );
 
 Creates a new request object from supplied $env hash. Intended for internal use only.
-
-=head1 ATTRIBUTES
-
-=over 4
 
 =item env
 
