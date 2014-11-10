@@ -328,14 +328,14 @@ PEF::Front::Request - HTTP request object from PSGI env hash
 
 package My::Local::Test;
 
-sub test {
+  sub test {
     my ($msg, $defaults) = @_;
     return {
         result    => "OK",
         data      => [1, 2],
         path_info => $defaults->{request}->path_info
     };
-}
+  }
 
 =head1 DESCRIPTION
 
@@ -353,7 +353,7 @@ Unless otherwise noted, all methods and attributes are B<read-only>,
 and passing values to the method like an accessor doesn't work like
 you expect it to.
 
-=over 4
+=over 2
 
 =item new
 
