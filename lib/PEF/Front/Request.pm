@@ -14,7 +14,7 @@ sub new {
 	Carp::croak(q{$env is required})
 	  unless defined $env && ref ($env) eq 'HASH';
 	my $self = bless {env => $env}, $class;
-	$self->parse;
+	$self->_parse;
 	$self;
 }
 sub env              { $_[0]->{env} }
@@ -29,7 +29,7 @@ sub query_string     { $_[0]->{env}{QUERY_STRING} }
 sub script_name      { $_[0]->{env}{SCRIPT_NAME} }
 sub scheme           { $_[0]->{env}{'psgi.url_scheme'} }
 sub secure           { $_[0]->scheme eq 'https' }
-sub input            { $_[0]->{env}{'psgi.input'} }
+sub _input           { $_[0]->{env}{'psgi.input'} }
 sub content_length   { $_[0]->{env}{CONTENT_LENGTH} }
 sub content_type     { $_[0]->{env}{CONTENT_TYPE} }
 sub raw_body         { $_[0]->{raw_body} }
@@ -42,7 +42,7 @@ sub logger {
 	$_[0]->{env}{'psgix.logger'} || sub { }
 }
 
-sub parse {
+sub _parse {
 	my $self = $_[0];
 	$self->_parse_query_params;
 	$self->_parse_request_body if $self->method eq 'POST';
@@ -167,7 +167,7 @@ sub _parse_request_body {
 	my $read_body_sub = sub {
 		$self->{raw_body} = '';
 		my $buffer;
-		while ($cl && $self->input->read($buffer, $cl)) {
+		while ($cl && $self->_input->read($buffer, $cl)) {
 			$self->{raw_body} .= $buffer;
 			$cl -= length $buffer;
 		}
@@ -201,7 +201,7 @@ sub _parse_request_body {
 sub _parse_multipart_form {
 	my $self   = $_[0];
 	my $buffer = '';
-	my $input  = $self->input;
+	my $input  = $self->_input;
 	my $cl     = $self->{env}{CONTENT_LENGTH};
 	my $ct     = $self->{env}{CONTENT_TYPE};
 	$self->{body_params} = {};
@@ -244,19 +244,19 @@ sub _parse_multipart_form {
 				if (defined ($file) && $file ne '') {
 					($file) = ($file =~ /([^\/\\:]*)$/);
 					$current_field = decode_utf8($name);
-					$form->{$current_field} =
-					  PEF::Front::File->new(filename => decode_utf8($file),
-											size     => $cl,
-											content_type => $type || 'application/octet-stream',
-											(exists ($form->{$current_field . '_id'})
-											   && !ref ($form->{$current_field . '_id'})
-											 ? (id => $self->remote_ip . "/"
-												. $self->scheme . "/"
-												. $self->hostname . "/"
-												. $form->{$current_field . '_id'})
-											 : ()
-											)
-					  );
+					$form->{$current_field} = PEF::Front::File->new(
+						filename => decode_utf8($file),
+						size     => $cl,
+						content_type => $type || 'application/octet-stream',
+						(   exists ($form->{$current_field . '_id'})
+							  && !ref ($form->{$current_field . '_id'})
+							? (id => $self->remote_ip . "/"
+								  . $self->scheme . "/"
+								  . $self->hostname . "/"
+								  . $form->{$current_field . '_id'})
+							: ()
+						)
+					);
 					$current_field = $form->{$current_field};
 					$current_field->append($current_value);
 				} else {
@@ -318,3 +318,181 @@ sub _parse_multipart_form {
 	return $form;
 }
 1;
+__END__
+
+=head1 NAME
+
+PEF::Front::Request - HTTP request object from PSGI env hash
+
+=head1 SYNOPSIS
+
+package My::Local::Test;
+
+sub test {
+    my ($msg, $defaults) = @_;
+    return {
+        result    => "OK",
+        data      => [1, 2],
+        path_info => $defaults->{request}->path_info
+    };
+}
+
+=head1 DESCRIPTION
+
+L<PEF::Front::Request> provides a consistent API for request objects across
+PEF::Front framework.
+
+=head1 CAVEAT
+
+This module is intended to be used by web application developers only in rare circumstances.
+Developers can receive an object of this type in "Local", "InFilter" and "OutFilter" handlers via hash "defaults". 
+
+=head1 METHODS
+
+Unless otherwise noted, all methods and attributes are B<read-only>,
+and passing values to the method like an accessor doesn't work like
+you expect it to.
+
+=head2 new
+
+    PEF::Front::Request->new( $env );
+
+Creates a new request object from supplied $env hash. Intended for internal use only.
+
+=head1 ATTRIBUTES
+
+=over 4
+
+=item env
+
+Returns the shared PSGI environment hash reference. This is a
+reference, so writing to this environment passes through during the
+whole PSGI request/response cycle.
+
+=item remote_ip
+
+Returns the IP address of the client (C<REMOTE_ADDR>).
+
+=item method
+
+Contains the request method (C<GET>, C<POST>, C<HEAD>, etc).
+
+=item protocol
+
+Returns the protocol (HTTP/1.0 or HTTP/1.1) used for the current request.
+
+=item request_uri
+
+Returns the raw, undecoded request URI path. You probably do B<NOT>
+want to use this to dispatch requests.
+
+=item path_info
+
+Returns B<PATH_INFO> in the environment. Use this to get the local
+path for the requests.
+
+=item path ( [$path] )
+
+Similar to C<path_info> but can be changed during internal routing process. 
+Decoded to utf8 perl internal representation.
+
+=item query_string
+
+Returns B<QUERY_STRING> in the environment. This is the undecoded
+query string in the request URI.
+
+=item script_name
+
+Returns B<SCRIPT_NAME> in the environment. This is the absolute path
+where your application is hosted. B<NOT TESTED>
+
+=item scheme
+
+Returns the scheme (C<http> or C<https>) of the request.
+
+=item secure
+
+Returns true or false, indicating whether the connection is secure (https).
+
+=item logger
+
+Returns (optional) C<psgix.logger> code reference. When it exists,
+your application is supposed to send the log message to this logger,
+using:
+
+  $req->logger->({ level => 'debug', message => "This is a debug message" });
+
+=item cookies
+
+Returns a reference to a hash containing the cookies. Values are
+strings that are sent by clients and are URI decoded.
+
+If there are multiple cookies with the same name in the request, this
+method will ignore the duplicates and return only the first value. If
+that causes issues for you, you may have to use modules like
+CGI::Simple::Cookie to parse C<<$request->header('Cookies')>> by
+yourself.
+
+=item params
+
+Returns a hash reference containing (merged) GET
+and POST parameters.
+
+=item raw_body
+
+Returns the request content in an undecoded byte string for POST requests.
+
+=item base
+
+Returns full URL string of current request.
+
+=item user
+
+Returns C<REMOTE_USER> if it's set.
+
+=item headers
+
+Returns an L<PEF::Front::HTTPHeaders> object containing the headers for the current request.
+
+=item content_encoding
+
+Shortcut to $req->headers->get_header("content_encoding").
+
+=item content_length
+
+Returns length of content.
+
+=item content_type
+
+Returns Content-Type header value.
+
+=item header
+
+Shortcut to $req->headers->get_header.
+
+=item referer
+
+Shortcut to $req->headers->get_header("referer").
+
+=item user_agent
+
+Shortcut to $req->headers->get_header("user_agent").
+
+=item param($param, [$value])
+
+Returns GET and POST parameters. This is an alternative method for accessing parameters in
+$req->params. It B<does> allow setting or modifying query parameters.
+
+=back
+
+=head1 AUTHORS
+
+PEF Secure
+
+=head1 LICENSE
+
+This library is free software; you can redistribute it and/or modify
+
+it under the same terms as Perl itself.
+
+=cut
