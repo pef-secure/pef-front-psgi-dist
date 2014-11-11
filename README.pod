@@ -9,7 +9,7 @@ PEF::Front framework implemets MVC model in a non-standard way. Main goals are:
 =over 2
 
   * Speed
-  * Explicit model method descriptin
+  * Explicit model method description
   * Better job separation
   * Less code duplication
   * Convenience
@@ -18,7 +18,7 @@ PEF::Front framework implemets MVC model in a non-standard way. Main goals are:
 
 =head2 How is it different from the rest?
 
-Typical MVC application UI designed from Conrollers: they define data provided for View. 
+Typical MVC application UI is designed from Conrollers: they define data provided for View. 
 This framework allows to write HTML makets/templates first. Template automatically installs its Controller.
 Controller functions are distributed between AJAX, Submit/Get actions and Templates. 
 

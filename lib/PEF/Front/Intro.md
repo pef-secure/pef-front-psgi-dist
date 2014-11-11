@@ -125,7 +125,7 @@ sub cfg_www_static_captchas_dir { cfg_www_static_dir() . "/images/captchas" }
 ```
 
 ## Export of application's parameters
-`PEF::Front::Config` have some limited functionality of `Exporter` to propagate application's parameters to local model handlers or in/out filters. For example:
+`PEF::Front::Config` has some limited functionality of `Exporter` to propagate application's parameters to local model handlers or in/out filters. For example:
 ```
 our @EXPORT = qw(avatar_images_path);
 sub avatar_images_path () { cfg_www_static_dir() .'/images/avatars' }
@@ -418,9 +418,13 @@ sub filter {
 
 `filter` can be one substitutional regexp, array of  substitutional regexps or filtering function which returns changed field value. Recognized substitutional regexp operators are: `s`, `tr`, `y`.
 
-##### Фильтры отправляемых ответов
-В секции `result` у конкретного кода ответа можно задать дополнительный атрибут `filter`, что будет означать дополнительную обработку данных перед отправкой. Фильтр представляет собой функцию в модуле в иерархии PEF::OutFilter::*, которой передаются значения ($response, $defaults), на основании которых она может изменять переданный хеш $response. Смысл в получении каких-либо данных из модели и преобразования их к новому формату, например XML, CSV, XLS и подобными.
-Например:
+##### Output filters
+
+It's possible to specify filtering function for sending content. Attribute `filter` for given `result code` in `result` section specifies by calling function in some module under `cfg_app_namespace` hierarchy. Local model handlers are located in `cfg_out_filter_dir`.
+This filtering function accepts two paramters: ($response, $defaults). $response must be modified "in-pace", return value of the function doesn't matter.
+Intended application is to make transofmation from internal data representation to external form, like XML, CSV, XLS and so on.
+
+For example:
 
 model/Test.yaml:
 ```
@@ -447,9 +451,9 @@ sub test {
 1;
 ```
 
-#### Как работает капча
+#### How captcha works
 
-Использования локального обработчика на примере капчи.
+Example of usage local handler for catptchas.
 
 Captcha.yaml:
 ```
@@ -488,7 +492,7 @@ allowed_source:
     - ajax
 ```
 
-В шаблоне присутствует примерно следующий код:
+There's some HTML-code in template like this:
 ```
 <form method="post" action="/submitSendMessage">
 Captcha:
@@ -500,32 +504,42 @@ Captcha:
 </form>
 ```
 
-Капча формируется на фронтенде и там же она проверяется перед посылкой данных в модель. Проверка капчи деструктивна, проверить её правильность возможно только один раз, в следующий раз код, который только что был правильным, уже будет использован и его проверка не пройдёт. Вызов "captcha".model формирует картиинку, вносит информацию о ней в базу данных и отдаёт ссылку на неё. Если требуется перезагрузка картинки, то на ajax делается вызов /ajaxCaptcha, информация из которого используется для прописывания нового содержимого поля captcha\_hash. В момент вызова /submitSendMessage будет произведена автоматическая проверка соответствия капчи. Для случая, когда сообщение отправляется зарегистрированным пользователем, можно капчу не требовать, но параметр captcha\_code всё равно необходим. В этом случае предусмотрено специальное значение "nocheck", чтобы фронтенд не проверял капчу для зарегистрированного пользователя, в этом случае проверка переносится в ядро. Модель должно увидеть, что пришло сообщениие от незарегистрированного пользователя и с непроверенной капчей и среагировать соответственно.
+Capthcha image is made by `PEF::Front::Captcha::make_captcha($message, $defaults)` function. 
+This function writes generated images in `cfg_www_static_captchas_dir`, stores some information in its own database in `cfg_captcha_db` and
+returns generated md5 sum. When form is submitted, `PEF::Front::Validator` checks the code and when it is right, passes to the model method `send message`.
+Captcha code checks are destructive: the code is not valid anymore after successful check. There's some special case:
+when user is logged in and should not input captcha code, then  `PEF::Front::Validator` passes to the model method but sets field `captcha_code` to "nocheck". 
+In this case model method must check this value by itself.
 
 ### AJAX
 
-В случае вызова по URL доступны следующие префиксы:
-* `ajax` -- в этом случае ответ ядра будет передан в виде JSON-текста, обработка результатов не будет учитывать возможные редиректы.
-* `submit` -- в этом случае ответом подразумевается редирект на новый URL или прямой ответ значения, например для ответа платёжным системам.
-* `get` -- так же, как и submit, но может принимать дополнительные параметры как части URL. Предназначено для ссылок в письме или других запросов. Например https://domain.com/getConfirmNewEmail/2134242342423 -- здесь параметр, если не указано его имя, будет называться cookie. Можно передавать несколько параметров, которые разделяются символом '/', имя параметра от значения отделяется символом '-'.
+`PEF Front` recognizes needed action by URL path prefix:
+* `ajax` -- response is `application/json` and possible redirects in result section are ignored
+* `submit` -- respons is either redirect to another page or some content probably with text/html content-type
+* `get` -- synonim of `submit` but with rest URL path parsing. Example: https://domain.com/getConfirmNewEmail/2134242342423.
+   Extra path parameters are divided by `/`. Named parameters have form `name`-`value`, unnamed parameters have their name as `cookie`.
 
 ### File upload
 
-Когда происходит закачка файлов на сервер, они сохраняются в каталоге `cfg_upload_dir`/$$ -- в подкаталоге по номеру рабочего процесса, чтобы между разными процессами не было пересечения файлов.
-В данных формы в соответствующем поле будет содержаться объект `PEF::Front::File`, в котором можно узнать все необходимые данные о файле, чтобы его в дальнейшем обработать: перенести в постоянное место хранения или ещё как-либо использовать.
-По окончании обработки запроса, если файл не был куда-либо перемещён, то в момент удаления экземпляра объекта будет удалён и файл, на который он указывает.
+Uploaded files are stored in `cfg_upload_dir`/$$ direcory, every working process has its own upload directory to not overwrite files from parallel requests.
+Uploaded files are objects of `PEF::Front::File` in corresponding form fields. They are deleted after request's end, so local handlers must move or link that files into some permanent storage before that.
 
-Если в данных формы перед полем `file_field`, содержащим файл, было задано поле `file_field_id`, то значение этого поля используется как идентификатор файла, который может использоваться для запросов отдельным AJAX-обработчиком о прогрессе закачивания файла.
-Для этого нужно описать соответствующий вызов модели и в качестве `model` указать `PEF::Front::UploadProgress`, в параметрах должны быть `ip` и `id`, где `id` -- значение из поля `file_field_id`. В ответе будут параметры done и size: `{result => 'OK', done => $done, size => $size}`.
-Если файл уже был закачан и прогресса по нему больше не может быть или не закачивался вообще, то ответом будет `{result => 'NOTFOUND', answer => 'File with this id not found'}`.
+#### Upload progress
 
-_Важное замечание:_ В момент закачивания значение ответа size известно приблизительно или не верно вообще, поэтому не стоит на него полагаться полностью.
+To obtain upload progress information there's must be special field `file_field_id` put in form before file input field `file_field`. The content of this field `file_field_id` is used as id to get upload progress info by some AJAX-function.
+Model method description for this AJAX-request must have `PEF::Front::UploadProgress` as `model` value. This model method returns response like `{result => 'OK', done => $done, size => $size}`. 
+When upload is finished or not even started, the response is `{result => 'NOTFOUND', answer => 'File with this id not found'}`.
 
-### Кеш ответов ядра
-Некоторые данные от ядра могут меняться редко, для этого предусмотрено кеширование. Кешированием управляет ключ cache. У него есть два атрибута:
-* key -- значение или массив, описываются параметры, от которых зависит выборка.
-* expires -- как долго можно считать значение актуальным. Разбор этого параметра ведётся модулем Time::Duration::Parse.
-Пример описания ключа:
+_Important:_ The `size` data in response can be known aproximately or unknown at all, so don't depend on it.
+
+### Caching model responses
+
+Some methods can return constant or rarely changing data, it makes perfect sense to cache them.
+Key `cache` manages caching for a model method. It has to attributes:
+* `key` -- one value or array defining key data
+* expires -- how long the data can be retained in cache. This value is parsed by Time::Duration::Parse.
+
+Example:
 ```
 cache:
     key: method
