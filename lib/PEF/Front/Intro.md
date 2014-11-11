@@ -537,7 +537,7 @@ _Important:_ The `size` data in response can be known aproximately or unknown at
 Some methods can return constant or rarely changing data, it makes perfect sense to cache them.
 Key `cache` manages caching for a model method. It has to attributes:
 * `key` -- one value or array defining key data
-* expires -- how long the data can be retained in cache. This value is parsed by Time::Duration::Parse.
+* `expires` -- how long the data can be retained in cache. This value is parsed by Time::Duration::Parse.
 
 Example:
 ```
@@ -546,7 +546,7 @@ cache:
     expires: 1m
 ```
 
-## Обработка результата ответа
+## Response result processing
 Ключ result определяет действия, который необходимо совершить при получении ответа от ядра. Ядро возвращает, как правило, следующие варианты ответа:
 ```
 {
