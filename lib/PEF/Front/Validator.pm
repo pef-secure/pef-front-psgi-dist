@@ -274,7 +274,7 @@ sub make_rules_parser {
 				  . ";\n\t\tlast if \$new_location;\n";
 			}
 			$rw .= "\t}\n";
-			$sub_int .= $rw;
+			$sub_int .= "\tif(\$defaults->{src} ne 'ajax') { $rw }";
 		} elsif ($cmd eq 'set-cookie') {
 			for my $c (keys %{$start->{$cmd}}) {
 				$sub_int .= make_cookie_parser($c => $start->{$cmd}{$c});
