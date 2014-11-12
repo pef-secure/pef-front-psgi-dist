@@ -547,13 +547,19 @@ cache:
 ```
 
 ## Response result processing
-Ключ result определяет действия, который необходимо совершить при получении ответа от ядра. Ядро возвращает, как правило, следующие варианты ответа:
+
+Section `result` describes actions to execute for different model response result codes. Model response looks like:
+
 ```
 {
     result => "OK",
-...
+... # different data
 }
-либо
+```
+
+**or**
+
+```
 {
     result => "SOMEERRCODE",
     answer => 'Some $1 Error $2 Message $3',
@@ -562,53 +568,56 @@ cache:
 }
 ```
 
-На основании ключа ответа result, выбирается действие из соответственного описания result. Плюс есть специальное описание DEFAULT, которое используется, когда никакое другое не подошло. В аттрибутах действия можно опиисать:
-* `redirect` -- временный редирект браузера для submit и get запросов.
-* `set-cookie` -- установить куку. ключами выступают названия устанавливаемых кук, которым можно добавить соответсвтующие атрибуты 
-* `unset-cookie` -- сбросить куку браузера.
-* `filter` -- специальный фильтр, обрабатывающий ответ
-* `answer` -- прямое значение ключа answer в ответе
-* `set-header` -- устанавливает заголовок в ответе
-* `add-header` -- добавляет заголовок. в отличии от `set-header`, можно в ответе выдать несколько заголовков с одинаковым именем.
+Response key `result` defines what `result`'s section to execute actions. When no section is found then it looks for `DEFAULT` section. Following actions are possible:
 
-_Замечание:_ при установке куки, атрибут `secure` может быть вычислен автоматически исходя из схемы запроса: `https` значит secure => 1, `http` значит не устанавливать признак `secure`
+* `redirect` -- temporary browser redirect for `get` and `submit`.
+* `set-cookie` -- set cookie. possible attributes: `value`, `expires`, `domain`, `path`, `secure`, `max-age`, `httponly`
+* `unset-cookie` -- unset cookie. it can be one cookie name, list of cookies or hash of cokies and their attributes like `set-cookie`
+* `filter` -- output filter
+* `answer` -- answer content
+* `set-header` -- set response header. this action ensures that there's only one header with given name in response 
+* `add-header` -- add response header. this action allows to have multiple headers with the same name
 
-Директива `unset-cookie` может использоваться в том же виде, что и `set-cookie`, т.е. с указанием дополнительных атрибутов у сбрасываемой куки. Это может потребоваться, если какие-либо дополнительные параметры были заданы при установке куки. Например, если при установке куки был задан домен, то чтобы куку сбросить, надо браузеру передать не только то же название, но и тот же домен куки. Вместо придумывания общего не обязательно эффективного решения с сохранением всех выданных кук в базу фреймворка, предлагается прогаммисту просто указать нужные аттрибуты при сбрасывании. Если никаких атрибутов не было использовано, то `unset-cookie` сможет сбросить куку самостоятельно, при этом можно указывать куку одиночным значением или массивом.
+_Important:_ cookie `secure` attribute can be calculated automatically from request's scheme when setting or unsetting cookie if not explicitly set in attributes.
 
-## Рутинг
+When some some cookie attributes like `domain` or `path` are set, `unset-cookie` can't unset cookie without defining the same attributes.
 
-Стандартная схема путей доступа фреймворка выглядит так:
-* `/app$Template` -- шаблонизированные страницы
-* `/ajax$Method` -- вызов метода модели аяксом, результат JSON-сообщение
-* `/submit$Method` -- то же, что и ajax, но подразумевается в ответе перенаправление на новое место или возврат информации, вроде HTML
-* `/get$Method/$id...` -- то же, что и submit, но подразумевается наличие дополнительных параметров в пути
+## Routing
 
-Вся эта замечательная схема не всем нравится. Иногда хочется иметь "красивые" пути, вроде `/product/smartphone/Samsung` вместо `/appProduct?id_product=9300`. Для преобразования путей, что используются в браузере в те, что полнимаются во фреймворке, используется рутинг.
+`PEF Front` has following local path scsheme:
+* `/app$Template` -- pages from templates
+* `/ajax$Method` -- AJAX-method returning JSON
+* `/submit$Method` -- receives submitted data and returns `answer` or makes redirect
+* `/get$Method/$id...` -- just like `submit` but can parse additional parameters from path
 
-Рутинг задаётся до старта приложения. Его можно импортировать в модуль `PEF::Front::Route` или добавить через функцию `PEF::Front::Route::add_route`:
+Not everyone is happy with this beautyful scheme. Some people like ugly scheme like `/product/smartphone/Samsung-Galaxy-S5` instead of `/appProduct?id_product=9500`.
+Routing makes this translation possible. `PEF::Front::Route` can import routing rules or they can be added via `PEF::Front::Route::add_route`.
+Something like this:
 ```
-use PEF::Front::Route ('/index' => ['/appIndex', 'R']);
+use PEF::Front::Route ('/' => '/appIndex', '/product/smartphone/Samsung-Galaxy-S5' => '/appProduct?id_product=9500');
 ```
 
-Рутинг всегда задаётся парами: правило => назначение. Назначение может иметь дополнительные флаги. Флаги могут иметь параметр через знак `=`. Флаги разделяются запятыми. Поддерживаются следующие флаги:
-* `R` -- редирект. Можно задать параметром статус редиректа. Например, `R=301` для перманентного редиректа
-* `L` -- это правило последнее, если сработало. Можно задать статус ответа, если не передан полный ответ `$http_response`. Например, `L=404`, чтобы прервать обработку и показать пользователю, что информация не найдена
-* `RE` -- флаги для Regexp, Например, `RE=g`
+Routing is always given by pairs: `rule` => `destination`. Destination can be one value or 2-elements array with value and `flags`. 
+Some `flags` can have parameter like `R=302`. `Flags` is a comma-separated list of any of the following flags:
+* `R` -- redirect. By default it's temporary redirect but parameter can change it: `R=301` means permanent redirect
+* `L` -- last if rule check is true. Parameter can set response status: `L=404`
+* `RE` -- regexp flags like: `RE=g`
 
-Поддерживаются следующие комбинации типов правил и назначения:
-* Regexp => строка. В этом случае преобразование будет иметь вид `s"$regexp"$string"$flags`. Например: qr"/index(.*)" => '/appIndex$1'
-* Regexp => CODE. При совпадении `m"$regexp"$flags` будет вызвана указанная функция с параметрами ($request, @params), где @params -- массив совпавших групп из сработавшего $regexp
-* строка => строка. Проверяется буквальное совпадение строки и если произошло, то путь заменяется на другую строку
-* строка => CODE. Проверяется буквальное совпадение строки и если произошло, вызывается функция с параметром ($request)
-* CODE => строка. В случае, когда фунцкия возвращает истину, путь заменяется на строку
-* CODE => CODE. Если правило сработало, то в функцию назначения передаются параметры ($request, @params), где @params -- массив, который вернула функция совпадения
-* CODE => undef. В этом случае функция, отвечающая за правило, является так же и функцией, возвращающей новый путь
+Following combinations of rules and destinations are supported:
+* Regexp => string. Transformation function is simple regexp substitution: `s"$regexp"$string"$flags`. Example: qr"/index(.*)" => '/appIndex$1'
+* Regexp => CODE. if `m"$regexp"$flags` is true, supplied function is called with params ($request, @params), where @params is array of matched groups of $regexp
+* string => string. Replaces one string with another
+* string => CODE. When path is exactly equal to the strng then supplied function is called with parameter ($request)
+* CODE => string. When supplied function with parameter($request) returns true, then path is replaces with the string
+* CODE => CODE. When supplied function with parameter($request) returns true, then second s called with params ($request, @params), where @params is result of first matching function
+* CODE => undef. Supplied function with parameter($request) checks path and returns new destination by itself
 
-Функции назначения могут вернуть простую строку или массив, в котором будут:
+Destination function can return new destination or array one of the follwing forms:
 * `[$dest_url]`
 * `[$dest_url, $flags]`
 * `[$dest_url, $flags, $http_response]`
 
-В случае флагов `R` или `L` это правило будет последним, дальнейших преобразований пути не происходит.
+Any of flags `R` or `L` means "last rule".
 
-Итогом преобразования пути должен быть путь из "стандартной схемы" или редирект.
+Result of the routing process must be redirect, response or path of `PEF Front` scheme.
+ 
