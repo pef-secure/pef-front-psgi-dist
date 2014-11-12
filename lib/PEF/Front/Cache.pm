@@ -16,14 +16,16 @@ our @EXPORT = qw{
 my $cache;
 
 BEGIN {
-	$cache = Cache::FastMmap->new(
-		share_file     => cfg_cache_file(),
-		cache_size     => cfg_cache_size(),
-		empty_on_exit  => 0,
-		unlink_on_exit => 0,
-		expire_time    => cfg_cache_expire(),
-		init_file      => 1
-	) or die "Can't create cache: $!";
+	if (grep { /AppFrontConfig\.pm$/ } keys %INC) {
+		$cache = Cache::FastMmap->new(
+			share_file     => cfg_cache_file(),
+			cache_size     => cfg_cache_size(),
+			empty_on_exit  => 0,
+			unlink_on_exit => 0,
+			expire_time    => cfg_cache_expire(),
+			init_file      => 1
+		) or die "Can't create cache: $!";
+	}
 }
 
 sub get_cache {
