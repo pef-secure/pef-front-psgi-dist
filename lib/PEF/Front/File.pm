@@ -44,7 +44,13 @@ sub append {
 		binmode $fh;
 		$self->{fh} = $fh;
 	}
-	syswrite ($self->{fh}, $_[1]);
+	my $rc = syswrite ($self->{fh}, $_[1]);
+	die {result => 'INTERR', answer => "Failed upload: $!"} if not defined $rc;
+	die {
+		result => 'INTERR',
+		answer => "Partial upload write: $rc != " . length $_[1]
+	  }
+	  if $rc != length $_[1];
 	if (exists $self->{id}) {
 		my $size = sysseek ($_[0], 0, 1);
 		set_cache("upload:$self->{id}", "$size:$self->{size}");
@@ -81,7 +87,8 @@ sub DESTROY {
 	if (exists $self->{id}) {
 		remove_cache_key("upload:$self->{id}");
 	}
-	unlink "$self->{upload_path}/$self->{filename}" if -e "$self->{upload_path}/$self->{filename}";
+	unlink "$self->{upload_path}/$self->{filename}"
+	  if -e "$self->{upload_path}/$self->{filename}";
 }
 
 1;
