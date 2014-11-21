@@ -163,7 +163,7 @@ sub to_app {
 				if (-e $sfn && -r $sfn && -f $sfn) {
 					$http_response->status(200);
 					$http_response->set_header('content-type',
-						File::LibMagic->new->checktype_contents($sfn));
+						File::LibMagic->new->checktype_filename($sfn));
 					$http_response->set_header('content-length', -s $sfn);
 					open my $bh, "<", $sfn;
 					$http_response->set_body_handle($bh);
