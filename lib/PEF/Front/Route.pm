@@ -8,6 +8,7 @@ use PEF::Front::Request;
 use PEF::Front::Response;
 use PEF::Front::Ajax;
 use PEF::Front::TemplateHtml;
+use if cfg_handle_static(), 'File::LibMagic';
 
 my @rewrite;
 my $rulepos = 0;
@@ -37,7 +38,8 @@ sub add_route {
 		if (ref ($rule) eq 'Regexp') {
 			if (!ref ($rewrite[$ri][$nurlpos])) {
 				$rewrite[$ri][$tranpos] =
-				    eval "sub {my \$request = \$_[0]; my \$url = \$request->path; return \$url if \$url =~ s\"$rule\""
+				  eval
+				  "sub {my \$request = \$_[0]; my \$url = \$request->path; return \$url if \$url =~ s\"$rule\""
 				  . $rewrite[$ri][$nurlpos] . "\""
 				  . (exists ($rewrite[$ri][$flagpos]{RE}) ? $rewrite[$ri][$flagpos]{RE} : "")
 				  . "; return }";
@@ -116,7 +118,9 @@ sub rewrite {
 				$http_response->status($rewrite_flags->{L});
 			}
 			return $http_response
-			  if $http_response && blessed($http_response) && $http_response->isa('PEF::Front::Response');
+			  if $http_response
+			  && blessed($http_response)
+			  && $http_response->isa('PEF::Front::Response');
 			$request->path($npi);
 			last if %$rewrite_flags and exists $rewrite_flags->{L};
 		}
@@ -129,7 +133,11 @@ sub to_app {
 		my $request  = PEF::Front::Request->new($_[0]);
 		my $response = rewrite($request);
 		return $response->response() if $response;
-		if (cfg_url_contains_lang && (substr ($request->path, 0, 1) ne '/' || substr ($request->path, 0, 3) ne '/')) {
+		if (cfg_url_contains_lang
+			&& (   substr ($request->path, 0, 1) ne '/'
+				|| substr ($request->path, 0, 3) ne '/')
+		  )
+		{
 			my $lang = guess_lang($request);
 			if ($request->method eq 'GET') {
 				my $http_response = PEF::Front::Response->new(base => $request->base);
@@ -148,8 +156,19 @@ sub to_app {
 		{
 			return PEF::Front::Ajax::handler($request);
 		} else {
-			my $http_response = PEF::Front::Response->new(base => $request->base);
-			$http_response->status(404);
+			my $http_response =
+			  PEF::Front::Response->new(base => $request->base, status => 404);
+			if (cfg_handle_static) {
+				my $sfn = cfg_www_static_dir . $request->path;
+				if (-e $sfn && -r $sfn && -f $sfn) {
+					$http_response->status(200);
+					$http_response->set_header('content-type',
+						File::LibMagic->new->checktype_contents($sfn));
+					$http_response->set_header('content-length', -s $sfn);
+					open my $bh, "<", $sfn;
+					$http_response->set_body_handle($bh);
+				}
+			}
 			return $http_response->response();
 		}
 	};

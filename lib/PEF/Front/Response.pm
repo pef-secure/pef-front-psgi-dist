@@ -80,6 +80,11 @@ sub set_body {
 	$self->{body} = [$body];
 }
 
+sub set_body_handle {
+	my ($self, $bh) = @_;
+	$self->{body} = $bh;
+}
+
 sub add_body {
 	my ($self, $body) = @_;
 	push @{$self->{body}}, $body;
@@ -140,7 +145,8 @@ sub make_headers {
 		$value = {value => $value} unless ref ($value) eq 'HASH';
 		no utf8;
 		my @cookie =
-		  (URI::Escape::uri_escape($name) . "=" . URI::Escape::uri_escape(safe_encode_utf8($value->{value})));
+		  (     URI::Escape::uri_escape($name) . "="
+			  . URI::Escape::uri_escape(safe_encode_utf8($value->{value})));
 		push @cookie, "domain=" . $value->{domain}            if $value->{domain};
 		push @cookie, "path=" . $value->{path}                if $value->{path};
 		push @cookie, "expires=" . expires($value->{expires}) if $value->{expires};
@@ -155,8 +161,10 @@ sub make_headers {
 sub response {
 	my ($self) = @_;
 	my $out = $self->make_headers;
-	for (@{$self->{body}}) {
-		$_ = encode_utf8($_) if utf8::is_utf8($_);
+	if ('ARRAY' eq ref $self->{body}) {
+		for (@{$self->{body}}) {
+			$_ = encode_utf8($_) if utf8::is_utf8($_);
+		}
 	}
 	push @$out, $self->{body};
 	return $out;

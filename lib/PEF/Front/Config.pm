@@ -52,6 +52,7 @@ my @std_params = qw{
   cfg_location_error
   cfg_template_cache
   cfg_no_nls
+  cfg_handle_static
 };
 
 sub import {
@@ -113,6 +114,7 @@ sub std_no_multilang_support         { 1 }
 sub std_default_lang                 { 'en' }
 sub std_url_contains_lang            { 0 }
 sub std_template_dir_contains_lang   { 0 }
+sub std_handle_static                { 0 }
 sub std_app_namespace                { $app_namespace }
 sub std_in_filter_dir                { "$app_conf_dir/InFilter" }
 sub std_model_local_dir              { "$app_conf_dir/Local" }
