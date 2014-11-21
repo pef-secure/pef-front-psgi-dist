@@ -41,7 +41,9 @@ sub referer          { $_[0]->headers->get_header("referer") }
 sub user_agent       { $_[0]->headers->get_header("user_agent") }
 
 sub logger {
-	$_[0]->{env}{'psgix.logger'} || sub { }
+	my $self = $_[0];
+	$self->{env}{'psgix.logger'}
+	  || sub { $self->{env}{'psgi.errors'}->print($_[0]->{message}); }
 }
 
 sub _parse {
