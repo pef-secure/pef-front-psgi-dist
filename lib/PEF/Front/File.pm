@@ -9,7 +9,11 @@ sub new {
 	my ($class, %args) = @_;
 	my $upload_path = cfg_upload_dir . "/$$";
 	if (!-d $upload_path) {
-		mkdir $upload_path, 0700;
+		mkdir ($upload_path, 0700)
+		  or die {
+			result => 'INTERR',
+			answer => "Misconfigured upload directory: $!"
+		  };
 	}
 	my $fname = $args{filename} || 'unknown_upload';
 	my ($name, $path, $suffix) = fileparse($fname, q|\.[^\.]*|);
@@ -24,6 +28,13 @@ sub new {
 		size         => (delete $args{size}) || -1,
 		filename     => $fname,
 	}, $class;
+	open (my $fh, ">", "$self->{upload_path}/$self->{filename}")
+	  or die {
+		result => 'INTERR',
+		answer => "Misconfigured upload directory: $!"
+	  };
+	binmode $fh;
+	$self->{fh} = $fh;
 	if (exists ($args{id}) && $args{id} ne '') {
 		$self->{id} = $args{id};
 		set_cache("upload:$self->{id}", "0:$self->{size}");
@@ -38,15 +49,16 @@ sub upload_path  { $_[0]->{upload_path} }
 
 sub append {
 	my $self = $_[0];
-	if (not exists $self->{fh}) {
-		open my $fh, ">", "$self->{upload_path}/$self->{filename}"
-		  or die {result => 'INTERR', answer => "Misconfigured upload directory: $!"};
-		binmode $fh;
-		$self->{fh} = $fh;
-	}
-	syswrite ($self->{fh}, $_[1]);
+	return if $_[1] eq '';
+	my $rc = syswrite ($self->{fh}, $_[1]);
+	die {result => 'INTERR', answer => "Failed upload: $!"} if not defined $rc;
+	die {
+		result => 'INTERR',
+		answer => "Partial upload write: $rc != " . length $_[1]
+	  }
+	  if $rc != length $_[1];
 	if (exists $self->{id}) {
-		my $size = sysseek ($_[0], 0, 1);
+		my $size = sysseek ($self->{fh}, 0, 1);
 		set_cache("upload:$self->{id}", "$size:$self->{size}");
 	}
 }
@@ -54,34 +66,28 @@ sub append {
 sub finish {
 	my $self = $_[0];
 	if (exists $self->{id}) {
-		my $size = sysseek ($_[0], 0, 2);
+		my $size = sysseek ($self->{fh}, 0, 2);
 		set_cache("upload:$self->{id}", "$size:$size");
-		$_[0]->{size} = $size;
+		$self->{size} = $size;
 	}
 }
 
 sub value {
 	my $self = $_[0];
-	return '' if not exists $self->{fh};
 	sysseek ($self->{fh}, 0, 0);
-	sysread ($self->{fh}, my $ret, -s $self->{fh});
+	my $ret = '';
+	sysread ($self->{fh}, $ret, -s $self->{fh});
 	return $ret;
 }
 
-sub fh {
-	my $self = $_[0];
-	return if not exists $self->{fh};
-	$self->{fh};
-}
+sub fh { $_[0]->{fh} }
 
 sub DESTROY {
 	my $self = $_[0];
-	close ($self->{fh}) if exists $self->{fh};
+	close ($self->{fh});
 	$self->{fh} = undef;
-	if (exists $self->{id}) {
-		remove_cache_key("upload:$self->{id}");
-	}
-	unlink "$self->{upload_path}/$self->{filename}" if -e "$self->{upload_path}/$self->{filename}";
+	remove_cache_key("upload:$self->{id}") if exists $self->{id};
+	unlink "$self->{upload_path}/$self->{filename}";
 }
 
 1;

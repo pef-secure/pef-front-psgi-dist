@@ -8,6 +8,7 @@ use Encode;
 use PEF::Front::Headers;
 use PEF::Front::File;
 use XML::Simple;
+use URI;
 
 sub new {
 	my ($class, $env) = @_;
@@ -28,6 +29,7 @@ sub path_info        { $_[0]->{env}{PATH_INFO} }
 sub query_string     { $_[0]->{env}{QUERY_STRING} }
 sub script_name      { $_[0]->{env}{SCRIPT_NAME} }
 sub scheme           { $_[0]->{env}{'psgi.url_scheme'} }
+sub uri              { URI->new($_[0]->base) }
 sub secure           { $_[0]->scheme eq 'https' }
 sub _input           { $_[0]->{env}{'psgi.input'} }
 sub content_length   { $_[0]->{env}{CONTENT_LENGTH} }
@@ -39,7 +41,9 @@ sub referer          { $_[0]->headers->get_header("referer") }
 sub user_agent       { $_[0]->headers->get_header("user_agent") }
 
 sub logger {
-	$_[0]->{env}{'psgix.logger'} || sub { }
+	my $self = $_[0];
+	$self->{env}{'psgix.logger'}
+	  || sub { $self->{env}{'psgi.errors'}->print($_[0]->{message}); }
 }
 
 sub _parse {
@@ -411,6 +415,12 @@ Returns the scheme (C<http> or C<https>) of the request.
 =item secure
 
 Returns true or false, indicating whether the connection is secure (https).
+
+=item uri
+
+Returns an URI object for the current request. 
+
+Every time this method is called it returns a new, cloned URI object.
 
 =item logger
 
