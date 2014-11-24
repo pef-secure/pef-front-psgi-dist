@@ -21,14 +21,16 @@ sub prepare_defaults {
 	my $lang;
 	my ($src, $method, $params);
 	if (cfg_url_contains_lang) {
-		($lang, $src, $method, $params) = $request->path =~ m{^/([\w][\w])/(app|ajax|submit|get)([^/]+)/?(.*)$};
+		($lang, $src, $method, $params) =
+		  $request->path =~ m{^/([\w][\w])/(app|ajax|submit|get)([^/]+)/?(.*)$};
 		if (not defined $lang) {
 			my $http_response = PEF::Front::Response->new(base => $request->base);
 			$http_response->redirect(cfg_location_error, 301);
 			return $http_response;
 		}
 	} else {
-		($src, $method, $params) = $request->path =~ m{^/(app|ajax|submit|get)([^/]+)/?(.*)$};
+		($src, $method, $params) =
+		  $request->path =~ m{^/(app|ajax|submit|get)([^/]+)/?(.*)$};
 		if (not defined $method) {
 			my $http_response = PEF::Front::Response->new(base => $request->base);
 			$http_response->redirect(cfg_location_error, 301);
@@ -36,7 +38,7 @@ sub prepare_defaults {
 		}
 		$lang = guess_lang($request);
 	}
-	if (($src eq 'get' || $src eq 'app') && defined ($params)) {
+	if (($src eq 'get' || $src eq 'app') && $params ne '') {
 		$src = 'submit';
 		my @params = split /\//, $params;
 		for my $pv (@params) {
@@ -96,9 +98,14 @@ sub ajax {
 
 	if (!$@) {
 		my $as = get_method_attrs($vreq => 'allowed_source');
-		if ($as && ((!ref ($as) && $as ne $src) || (ref ($as) eq 'ARRAY' && !grep { $_ eq $src } @$as))) {
+		if ($as
+			&& (   (!ref ($as) && $as ne $src)
+				|| (ref ($as) eq 'ARRAY' && !grep { $_ eq $src } @$as))
+		  )
+		{
 			$logger->({level => "error", message => "not allowed source $src"});
-			$response = {result => 'INTERR', answer => 'Unallowed calling source', answer_args => []};
+			$response =
+			  {result => 'INTERR', answer => 'Unallowed calling source', answer_args => []};
 			goto out;
 		}
 		my $cache_attr = get_method_attrs($vreq => 'cache');
@@ -154,13 +161,20 @@ sub ajax {
 			$stash->{uri_unescape} = sub { uri_unescape @_ };
 			my $err;
 			($new_loc, $response) =
-			  get_method_attrs($vreq => 'result_sub')->($response, $defaults, $stash, $http_response, $tt, $logger);
+			  get_method_attrs($vreq => 'result_sub')
+			  ->($response, $defaults, $stash, $http_response, $tt, $logger);
 		}
 	} else {
-		$logger->({level => "error", message => "validate error: " . Dumper($@, \%request)});
-		$response = (ref ($@) eq 'HASH' ? $@ : {result => 'INTERR', answer => 'Internal Error', answer_args => []});
+		$logger->(
+			{level => "error", message => "validate error: " . Dumper($@, \%request)});
+		$response = (
+			ref ($@) eq 'HASH'
+			? $@
+			: {result => 'INTERR', answer => 'Internal Error', answer_args => []});
 	}
-	if (exists $response->{answer_headers} and 'ARRAY' eq ref $response->{answer_headers}) {
+	if (exists $response->{answer_headers}
+		and 'ARRAY' eq ref $response->{answer_headers})
+	{
 		while (@{$response->{answer_headers}}) {
 			if (ref ($response->{answer_headers}[0])) {
 				if (ref ($response->{answer_headers}[0]) eq 'HASH') {
@@ -170,12 +184,15 @@ sub ajax {
 				}
 				shift @{$response->{answer_headers}};
 			} else {
-				$http_response->add_header($response->{answer_headers}[0], $response->{answer_headers}[1]);
+				$http_response->add_header($response->{answer_headers}[0],
+					$response->{answer_headers}[1]);
 				splice @{$response->{answer_headers}}, 0, 2;
 			}
 		}
 	}
-	if (exists $response->{answer_cookies} and 'ARRAY' eq ref $response->{answer_cookies}) {
+	if (exists $response->{answer_cookies}
+		and 'ARRAY' eq ref $response->{answer_cookies})
+	{
 		while (@{$response->{answer_cookies}}) {
 			if (ref ($response->{answer_cookies}[0])) {
 				if (ref ($response->{answer_cookies}[0]) eq 'HASH') {
@@ -185,7 +202,8 @@ sub ajax {
 				}
 				shift @{$response->{answer_cookies}};
 			} else {
-				$http_response->set_cookie($response->{answer_headers}[0], $response->{answer_headers}[1]);
+				$http_response->set_cookie($response->{answer_headers}[0],
+					$response->{answer_headers}[1]);
 				splice @{$response->{answer_cookies}}, 0, 2;
 			}
 		}
