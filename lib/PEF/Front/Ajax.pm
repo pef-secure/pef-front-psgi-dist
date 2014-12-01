@@ -170,7 +170,8 @@ sub ajax {
 		$response = (
 			ref ($@) eq 'HASH'
 			? $@
-			: {result => 'INTERR', answer => 'Internal Error', answer_args => []});
+			: {result => 'INTERR', answer => 'Internal Error', answer_args => []}
+		);
 	}
 	if (exists $response->{answer_headers}
 		and 'ARRAY' eq ref $response->{answer_headers})
@@ -230,14 +231,16 @@ sub ajax {
 		}
 		if (!defined ($new_loc) || $new_loc eq '') {
 			$logger->({level => "debug", message => "outputting the answer"});
+			my $ct = 'text/html; charset=utf-8';
 			if (   exists ($response->{answer_content_type})
 				&& defined ($response->{answer_content_type})
 				&& $response->{answer_content_type})
 			{
-				$http_response->content_type($response->{answer_content_type});
-			} else {
-				$http_response->content_type('text/html; charset=utf-8');
+				$ct = $response->{answer_content_type};
+			} elsif (defined (my $yct = $response->content_type)) {
+				$ct = $yct;
 			}
+			$http_response->content_type($ct);
 			$http_response->set_body($response->{answer});
 			return $http_response->response();
 		} else {
