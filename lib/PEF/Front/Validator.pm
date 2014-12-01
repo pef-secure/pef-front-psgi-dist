@@ -53,7 +53,7 @@ sub build_validator {
 				result      => 'INTERR',
 				answer      => 'Internal server error',
 				answer_args => [],
-				message => "Validation $rules->{method} error: unknow base rule '$mr' for $pr",
+				message => "Validation $rules->{method} error: unknow base rule '$mr->{base}' for $pr",
 			  }
 			  if not exists $cache{'-base-'}{rules}{params}{$mr->{base}};
 			my $bmr = $cache{'-base-'}{rules}{params}{$mr->{base}};
