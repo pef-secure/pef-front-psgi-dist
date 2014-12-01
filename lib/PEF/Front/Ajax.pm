@@ -237,7 +237,7 @@ sub ajax {
 				&& $response->{answer_content_type})
 			{
 				$ct = $response->{answer_content_type};
-			} elsif (defined (my $yct = $response->content_type)) {
+			} elsif (defined (my $yct = $http_response->content_type)) {
 				$ct = $yct;
 			}
 			$http_response->content_type($ct);
