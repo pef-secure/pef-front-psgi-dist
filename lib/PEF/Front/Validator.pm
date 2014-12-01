@@ -38,11 +38,25 @@ sub build_validator {
 		my $mr = $method_rules->{$pr};
 		$known_params{$pr} = undef;
 		if (!ref ($mr) && substr ($mr, 0, 1) eq '$') {
+			croak {
+				result      => 'INTERR',
+				answer      => 'Internal server error',
+				answer_args => [],
+				message => "Validation $rules->{method} error: unknow base rule '$mr' for $pr",
+			  }
+			  if not exists $cache{'-base-'}{rules}{params}{substr ($mr, 1)};
 			$mr = $cache{'-base-'}{rules}{params}{substr ($mr, 1)};
 		}
 		if (ref ($mr) && exists $mr->{base}) {
-			substr ($mr->{base}, 0, 1) = '' if substr ($mr->{base}, 0, 1) eq '$';
-			my $bmr = $cache{'-base-'}{rules}{params}{$mr->{base}} || {};
+			substr ($mr->{base}, 0, 1, '') if substr ($mr->{base}, 0, 1) eq '$';
+			croak {
+				result      => 'INTERR',
+				answer      => 'Internal server error',
+				answer_args => [],
+				message => "Validation $rules->{method} error: unknow base rule '$mr' for $pr",
+			  }
+			  if not exists $cache{'-base-'}{rules}{params}{$mr->{base}};
+			my $bmr = $cache{'-base-'}{rules}{params}{$mr->{base}};
 			$bmr = {regex => $bmr} unless ref $bmr;
 			$mr = {%$bmr, %$mr};
 		}
@@ -273,7 +287,7 @@ sub make_rules_parser {
 				  . make_value_parser($r)
 				  . ";\n\t\tlast if \$new_location;\n";
 			}
-			$rw .= "\t}\n";
+			$rw      .= "\t}\n";
 			$sub_int .= "\tif(\$defaults->{src} ne 'ajax') { $rw }";
 		} elsif ($cmd eq 'set-cookie') {
 			for my $c (keys %{$start->{$cmd}}) {
@@ -428,49 +442,44 @@ sub validate {
 		read ($fi, $raw_rules, -s $fi);
 		close $fi;
 		my @new_rules = eval { Load $raw_rules};
-		if ($@) {
-			cluck $@;
-			croak {
-				result      => 'INTERR',
-				answer      => 'Validator $1 description error: $2',
-				answer_args => [$method, "$@"]
-			  }
-			  if not exists $cache{$method}{code}
-			  or not defined $cache{$method}{code};
+		croak {
+			result      => 'INTERR',
+			answer      => 'Validator $1 description error: $2',
+			answer_args => [$method, "$@"]
+		  }
+		  if $@;
+		my $new_rules = $new_rules[0];
+		$new_rules->{method} = $method;
+		my $validator_sub = build_validator($new_rules);
+		eval "\$cache{\$method}{code} = $validator_sub";
+		croak {
+			result        => 'INTERR',
+			answer        => 'Validator $1 error: $2',
+			answer_args   => [$method, "$@"],
+			validator_sub => $validator_sub
+		  }
+		  if $@;
+		for (keys %$new_rules) {
+			$cache{$method}{$_} = $new_rules->{$_} if $_ ne 'code';
+		}
+		my $model;
+		if (!exists $new_rules->{model}) {
+			$model = 'rpc_site';
 		} else {
-			my $new_rules = $new_rules[0];
-			$new_rules->{method} = $method;
-			my $validator_sub = build_validator($new_rules);
-			eval "\$cache{\$method}{code} = $validator_sub";
-			croak {
-				result        => 'INTERR',
-				answer        => 'Validator $1 error: $2',
-				answer_args   => [$method, "$@"],
-				validator_sub => $validator_sub
-			  }
-			  if $@;
-			for (keys %$new_rules) {
-				$cache{$method}{$_} = $new_rules->{$_} if $_ ne 'code';
-			}
-			my $model;
-			if (!exists $new_rules->{model}) {
-				$model = 'rpc_site';
-			} else {
-				if ($new_rules->{model} =~ /::/) {
-					if ($new_rules->{model} =~ /^PEF::Front/) {
-						$model = $new_rules->{model};
-					} else {
-						$model = cfg_app_namespace . "Local::$new_rules->{model}";
-					}
-				} else {
+			if ($new_rules->{model} =~ /::/) {
+				if ($new_rules->{model} =~ /^PEF::Front/) {
 					$model = $new_rules->{model};
+				} else {
+					$model = cfg_app_namespace . "Local::$new_rules->{model}";
 				}
+			} else {
+				$model = $new_rules->{model};
 			}
-			$cache{$method}{model} = $model;
-			if (exists $new_rules->{result}) {
-				$cache{$method}{result_sub} =
-				  build_result_processor($new_rules->{result} || {});
-			}
+		}
+		$cache{$method}{model} = $model;
+		if (exists $new_rules->{result}) {
+			$cache{$method}{result_sub} =
+			  build_result_processor($new_rules->{result} || {});
 		}
 		$cache{$method}{modified} = $stats[9];
 	}
