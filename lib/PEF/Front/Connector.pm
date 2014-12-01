@@ -31,7 +31,7 @@ sub db_connect {
 	my $dbname = cfg_db_name;
 	my $dbuser = cfg_db_user;
 	my $dbpass = cfg_db_password;
-	$dbname .= "dbi:Pg:dbname=$dbname" if $dbname !~ /^dbi:/;
+	$dbname = "dbi:Pg:dbname=$dbname" if $dbname !~ /^dbi:/;
 	$conn = PEF::Front::_connector->new(
 		$dbname, $dbuser, $dbpass,
 		{   AutoCommit          => 1,
