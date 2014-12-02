@@ -159,8 +159,28 @@ sub to_app {
 			my $http_response =
 			  PEF::Front::Response->new(base => $request->base, status => 404);
 			if (cfg_handle_static) {
+				my $path = $request->path;
+				$path =~ s|/{2,}|/|g;
+				my @path = split /\//, $path;
+				my $valid = 1;
+				for (my $i = 0 ; $i < @path ; ++$i) {
+					if ($path[$i] eq '..') {
+						--$i;
+						if ($i < 1) {
+							$valid = 0;
+							$request->logger->(
+								{   level   => "error",
+									message => "not allowed path: " . $request->path
+								}
+							);
+							last;
+						}
+						splice @path, $i, 2;
+						--$i;
+					}
+				}
 				my $sfn = cfg_www_static_dir . $request->path;
-				if (-e $sfn && -r $sfn && -f $sfn) {
+				if ($valid && -e $sfn && -r $sfn && -f $sfn) {
 					$http_response->status(200);
 					$http_response->set_header('content-type',
 						File::LibMagic->new->checktype_filename($sfn));

@@ -88,7 +88,8 @@ Root application direcory is guessed from filepath to configuraton module.
 * `cfg_db_user` -- local db user
 * `cfg_db_reconnect_trys` -- number of reconnection attempts if connect to local db is lost. there's 1 sec pause between reconnections.
 * `cfg_default_lang` -- default application's messages language
-* `cfg_in_filter_dir` -- directory with input data filters
+* `cfg_handle_static` -- application will serve static files;
+ * `cfg_in_filter_dir` -- directory with input data filters
 * `cfg_location_error` -- redirect location when internal routing fails
 * `cfg_model_dir` -- YAML-files with descriptions of model methods
 * `cfg_model_local_dir` -- local model method handlers
