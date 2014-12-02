@@ -527,7 +527,7 @@ Uploaded files are objects of `PEF::Front::File` in corresponding form fields. T
 #### Upload progress
 
 To obtain upload progress information there's must be special field `file_field_id` put in form before file input field `file_field`. The content of this field `file_field_id` is used as id to get upload progress info by some AJAX-function.
-Model method description for this AJAX-request must have `PEF::Front::UploadProgress` as `model` value. This model method returns response like `{result => 'OK', done => $done, size => $size}`. 
+Model method description for this AJAX-request must have `PEF::Front::UploadProgress::get_progress` as `model` value. This model method returns response like `{result => 'OK', done => $done, size => $size}`. 
 When upload is finished or not even started, the response is `{result => 'NOTFOUND', answer => 'File with this id not found'}`.
 
 _Important:_ The `size` data in response can be known aproximately or unknown at all, so don't depend on it.
