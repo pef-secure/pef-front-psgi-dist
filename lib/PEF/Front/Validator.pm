@@ -53,7 +53,8 @@ sub build_validator {
 				result      => 'INTERR',
 				answer      => 'Internal server error',
 				answer_args => [],
-				message => "Validation $rules->{method} error: unknow base rule '$mr->{base}' for $pr",
+				message =>
+				  "Validation $rules->{method} error: unknow base rule '$mr->{base}' for $pr",
 			  }
 			  if not exists $cache{'-base-'}{rules}{params}{$mr->{base}};
 			my $bmr = $cache{'-base-'}{rules}{params}{$mr->{base}};
@@ -383,15 +384,8 @@ sub build_result_processor {
 	return eval $result_sub;
 }
 
-sub validate {
-	my $json     = $_[0];
-	my $defaults = $_[1];
-	my $method   = $json->{method}
-	  or croak(
-		{   result => 'INTERR',
-			answer => 'Unknown method'
-		}
-	  );
+sub load_validation_rules {
+	my ($method) = @_;
 	my $mrf = $method;
 	$mrf =~ s/ ([[:lower:]])/\u$1/g;
 	$mrf = ucfirst ($mrf);
@@ -483,12 +477,23 @@ sub validate {
 		}
 		$cache{$method}{modified} = $stats[9];
 	}
-	$cache{$method}{code}->($json, $defaults);
+}
+
+sub validate {
+	my ($request, $defaults) = @_;
+	my $method = $request->{method}
+	  or croak(
+		{   result => 'INTERR',
+			answer => 'Unknown method'
+		}
+	  );
+	load_validation_rules($method);
+	$cache{$method}{code}->($request, $defaults);
 }
 
 sub get_method_attrs {
-	my $json = $_[0];
-	my $method = ref ($json) ? $json->{method} : $json;
+	my $request = $_[0];
+	my $method = ref ($request) ? $request->{method} : $request;
 	if (exists $cache{$method}{$_[1]}) {
 		return $cache{$method}{$_[1]};
 	} else {
