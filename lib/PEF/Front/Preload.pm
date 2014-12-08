@@ -5,6 +5,7 @@ use PEF::Front::Config;
 use PEF::Front::Validator;
 use PEF::Front::Connector;
 use File::Find;
+use Data::Dumper;
 use Carp;
 
 my %preload_parts = (
@@ -39,7 +40,10 @@ sub preload_model {
 	  map { s/[[:lower:]]\K([[:upper:]])/ \l$1/g; lcfirst }
 	  grep { /\.yaml$/ } readdir $mdir;
 	closedir $mdir;
-	PEF::Front::Validator::load_validation_rules($_) for @methods;
+	for (@methods) {
+		eval { PEF::Front::Validator::load_validation_rules($_); };
+		croak "model $_ validation exception: " . Dumper $@ if $@;
+	}
 }
 
 sub preload_db_connect {
