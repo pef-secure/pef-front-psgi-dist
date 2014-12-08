@@ -8,7 +8,7 @@ use File::Find;
 use Carp;
 
 my %preload_parts = (
-	model         => 0,
+	model         => 1,
 	db_connect    => 0,
 	local_modules => 0,
 	in_filters    => 0,
