@@ -10,10 +10,10 @@ use Carp;
 
 my %preload_parts = (
 	model         => 1,
-	db_connect    => 0,
-	local_modules => 0,
-	in_filters    => 0,
-	out_filters   => 0
+	db_connect    => 1,
+	local_modules => 1,
+	in_filters    => 1,
+	out_filters   => 1
 );
 
 sub import {
@@ -37,7 +37,7 @@ sub preload_model {
 	opendir my $mdir, cfg_model_dir
 	  or croak "can't open model description directory: $!";
 	my @methods =
-	  map { s/[[:lower:]]\K([[:upper:]])/ \l$1/g; lcfirst }
+	  map { s/\.yaml$//; s/[[:lower:]]\K([[:upper:]])/ \l$1/g; lcfirst }
 	  grep { /\.yaml$/ } readdir $mdir;
 	closedir $mdir;
 	for (@methods) {
