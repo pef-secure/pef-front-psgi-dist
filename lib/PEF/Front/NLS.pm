@@ -7,20 +7,18 @@ use Geo::IPfree;
 use base 'Exporter';
 
 our @EXPORT = qw{
-  guess_lang
   msg_get
 };
 
 sub msg_peek {
 	my ($lang, $msgid) = @_;
-	my $conn  = db_connect;
 	my $found = 1;
 	my $id_nls_msgid;
 	my $message;
 	if (cfg_no_nls) {
-		$message      = $msgid;
+		$message = $msgid;
 	} else {
-		$conn->run(
+		db_connect->run(
 			sub {
 				($message, $id_nls_msgid) = $_->selectrow_array(
 					q{
@@ -60,7 +58,8 @@ sub msg_get {
 		if (not cfg_no_multilang_support and defined $ret->{id_nls_msgid}) {
 			my ($alt_lang) = db_connect->run(
 				sub {
-					$_->selectrow_array(q{select alt_lang from language where short_lang = ?}, undef, $lang);
+					$_->selectrow_array(q{select alt_lang from language where short_lang = ?},
+						undef, $lang);
 				}
 			);
 			$alt_lang ||= cfg_default_lang;
@@ -78,15 +77,16 @@ my $gi = Geo::IPfree->new;
 sub guess_lang {
 	my $request    = $_[0];
 	my $cookie_ref = $request->cookies;
-	my $lang       = (exists($cookie_ref->{'lang'}) ? $cookie_ref->{'lang'} : undef);
+	my $lang = (exists ($cookie_ref->{'lang'}) ? $cookie_ref->{'lang'} : undef);
 	if (cfg_no_multilang_support and not defined $lang) {
 		$lang = cfg_default_lang;
 	} elsif (not defined $lang) {
-		my $country = lc(($gi->LookUp($ENV{'REMOTE_ADDR'}))[0]);
+		my $country = lc (($gi->LookUp($ENV{'REMOTE_ADDR'}))[0]);
 		if (defined $country) {
 			($lang) = db_connect->run(
 				sub {
-					$_->selectrow_array(q{select short_lang from geo_language where country = ?}, undef, $country);
+					$_->selectrow_array(q{select short_lang from geo_language where country = ?},
+						undef, $country);
 				}
 			);
 		}
