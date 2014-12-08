@@ -28,7 +28,8 @@ my @std_params = qw{
   cfg_model_dir
   cfg_cache_file
   cfg_cache_size
-  cfg_cache_expire
+  cfg_cache_global_expire
+  cfg_cache_method_expire
   cfg_cookie_unset_negative_expire
   cfg_www_static_dir
   cfg_www_static_captchas_dir
@@ -125,7 +126,8 @@ sub std_captcha_font                 { "giant" }
 sub std_captcha_secret               { "very secret" }
 sub std_cache_file                   { "$project_dir/var/cache/shared.cache" }
 sub std_cache_size                   { "8m" }
-sub std_cache_expire                 { "1h" }
+sub std_cache_global_expire          { "1h" }
+sub std_cache_method_expire          { 60 }
 sub std_model_dir                    { "$project_dir/model" }
 sub std_www_static_dir               { "$project_dir/www-static" }
 sub std_www_static_captchas_dir      { "$project_dir/www-static/captchas" }

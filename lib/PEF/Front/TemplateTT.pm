@@ -72,7 +72,8 @@ sub handler {
 				} else {
 					@keys = ($cache_attr->{key});
 				}
-				$cache_attr->{expires} = 60 unless exists $cache_attr->{expires};
+				$cache_attr->{expires} = cfg_cache_method_expire
+				  unless exists $cache_attr->{expires};
 				$cache_key = join (":", @{$vreq}{@keys});
 				$logger->({level => "debug", message => "cache key: $cache_key"});
 				$response = get_cache("ajax:$cache_key");

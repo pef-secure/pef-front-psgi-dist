@@ -77,7 +77,8 @@ Root application direcory is guessed from filepath to configuraton module.
 ## Configuration parameters
 
 * `cfg_app_namespace` -- application namespace to use with filters and local model handlers
-* `cfg_cache_expire` -- default global expiring cache time
+* `cfg_cache_global_expire` -- default global expiring cache time;
+* `cfg_cache_method_expire` -- default method's expiring cache time;
 * `cfg_cache_file` -- cache file
 * `cfg_cache_size` -- cache size
 * `cfg_captcha_db` -- captcha db directory
