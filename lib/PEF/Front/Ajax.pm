@@ -14,77 +14,11 @@ use PEF::Front::Validator;
 use PEF::Front::NLS;
 use PEF::Front::Response;
 
-sub prepare_defaults {
-	my $request = $_[0];
-	my $form    = $request->params;
-	my $cookies = $request->cookies;
-	my $lang;
-	my ($src, $method, $params);
-	if (cfg_url_contains_lang) {
-		($lang, $src, $method, $params) =
-		  $request->path =~ m{^/([\w][\w])/(app|ajax|submit|get)([^/]+)/?(.*)$};
-		if (not defined $lang) {
-			my $http_response = PEF::Front::Response->new(base => $request->base);
-			$http_response->redirect(cfg_location_error, 301);
-			return $http_response;
-		}
-	} else {
-		($src, $method, $params) =
-		  $request->path =~ m{^/(app|ajax|submit|get)([^/]+)/?(.*)$};
-		if (not defined $method) {
-			my $http_response = PEF::Front::Response->new(base => $request->base);
-			$http_response->redirect(cfg_location_error, 301);
-			return $http_response;
-		}
-		$lang = guess_lang($request);
-	}
-	if (($src eq 'get' || $src eq 'app') && $params ne '') {
-		$src = 'submit';
-		my @params = split /\//, $params;
-		for my $pv (@params) {
-			my ($p, $v) = map { tr/+/ /; decode_utf8 $_} split /-/, uri_unescape($pv), 2;
-			if (!defined ($v)) {
-				$v = $p;
-				$p = 'cookie';
-			}
-			if (not exists $form->{$p}) {
-				$form->{$p} = $v;
-			} else {
-				if (ref ($form->{$p})) {
-					push @{$form->{$p}}, $v;
-				} else {
-					$form->{$p} = [$form->{$p}, $v];
-				}
-			}
-		}
-	}
-	my $ucMethod = $method;
-	$method =~ s/[[:lower:]]\K([[:upper:]])/ \l$1/g;
-	$method = lcfirst $method;
-	return {
-		ip        => $request->remote_ip,
-		lang      => $lang,
-		hostname  => $request->hostname,
-		path_info => $request->path,
-		form      => $form,
-		headers   => $request->headers,
-		scheme    => $request->scheme,
-		cookies   => $cookies,
-		method    => $method,
-		src       => $src,
-		request   => $request,
-	};
-}
-
 sub ajax {
-	my $request  = $_[0];
-	my $form     = $request->params;
-	my $cookies  = $request->cookies;
-	my $logger   = $request->logger;
-	my $defaults = prepare_defaults($request);
-	if (blessed($defaults) && $defaults->isa('PEF::Front::Response')) {
-		return $defaults->response();
-	}
+	my ($request, $defaults) = @_;
+	my $form          = $request->params;
+	my $cookies       = $request->cookies;
+	my $logger        = $request->logger;
 	my $http_response = PEF::Front::Response->new(base => $request->base);
 	my $lang          = $defaults->{lang};
 	my %request       = %$form;

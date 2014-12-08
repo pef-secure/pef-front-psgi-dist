@@ -92,7 +92,7 @@ sub import {
 	add_route(@params);
 }
 
-sub rewrite {
+sub rewrite_route {
 	my $request = $_[0];
 	for (my $i = 0 ; $i < @rewrite ; ++$i) {
 		my $rewrite_func  = $rewrite[$i][$tranpos];
@@ -134,10 +134,105 @@ sub rewrite {
 	return;
 }
 
+sub prepare_defaults {
+	my $request = $_[0];
+	my $form    = $request->params;
+	my $cookies = $request->cookies;
+	my $lang;
+	my ($src, $method, $params);
+	if (cfg_url_contains_lang) {
+		($lang, $src, $method, $params) =
+		  $request->path =~ m{^/([\w][\w])/(app|ajax|submit|get)([^/]+)/?(.*)$};
+		if (not defined $lang) {
+			my $http_response = PEF::Front::Response->new(base => $request->base);
+			$http_response->redirect(cfg_location_error, 301);
+			return $http_response;
+		}
+	} else {
+		($src, $method, $params) =
+		  $request->path =~ m{^/(app|ajax|submit|get)([^/]+)/?(.*)$};
+		if (not defined $method) {
+			my $http_response = PEF::Front::Response->new(base => $request->base);
+			$http_response->redirect(cfg_location_error, 301);
+			return $http_response;
+		}
+		$lang = guess_lang($request);
+	}
+	if (($src eq 'get' || $src eq 'app') && $params ne '') {
+		$src = 'submit';
+		my @params = split /\//, $params;
+		for my $pv (@params) {
+			my ($p, $v) = map { tr/+/ /; decode_utf8 $_} split /-/, uri_unescape($pv), 2;
+			if (!defined ($v)) {
+				$v = $p;
+				$p = 'cookie';
+			}
+			if (not exists $form->{$p}) {
+				$form->{$p} = $v;
+			} else {
+				if (ref ($form->{$p})) {
+					push @{$form->{$p}}, $v;
+				} else {
+					$form->{$p} = [$form->{$p}, $v];
+				}
+			}
+		}
+	}
+	my $ucMethod = $method;
+	$method =~ s/[[:lower:]]\K([[:upper:]])/ \l$1/g;
+	$method = lcfirst $method;
+	return {
+		ip        => $request->remote_ip,
+		lang      => $lang,
+		hostname  => $request->hostname,
+		path_info => $request->path,
+		form      => $form,
+		headers   => $request->headers,
+		scheme    => $request->scheme,
+		cookies   => $cookies,
+		method    => $method,
+		src       => $src,
+		request   => $request,
+	};
+}
+
+sub www_static_handler {
+	my ($request, $http_response) = @_;
+	my $path = $request->path;
+	$path =~ s|/{2,}|/|g;
+	my @path = split /\//, $path;
+	my $valid = 1;
+	for (my $i = 0 ; $i < @path ; ++$i) {
+		if ($path[$i] eq '..') {
+			--$i;
+			if ($i < 1) {
+				$valid = 0;
+				$request->logger->(
+					{   level   => "error",
+						message => "not allowed path: " . $request->path
+					}
+				);
+				last;
+			}
+			splice @path, $i, 2;
+			--$i;
+		}
+	}
+	my $sfn = cfg_www_static_dir . $request->path;
+	if ($valid && -e $sfn && -r $sfn && -f $sfn) {
+		$http_response->status(200);
+		$http_response->set_header('content-type',
+			File::LibMagic->new->checktype_filename($sfn));
+		$http_response->set_header('content-length', -s $sfn);
+		open my $bh, "<", $sfn;
+		$http_response->set_body_handle($bh);
+	}
+}
+
 sub to_app {
 	sub {
 		my $request  = PEF::Front::Request->new($_[0]);
-		my $response = rewrite($request);
+		my $response = rewrite_route($request);
 		return $response->response() if $response;
 		if (cfg_url_contains_lang
 			&& (   substr ($request->path, 0, 1) ne '/'
@@ -154,47 +249,27 @@ sub to_app {
 			}
 		}
 		my $lang_offset = (cfg_url_contains_lang) ? 3 : 0;
+		my $handler;
 		if (substr ($request->path, $lang_offset, 4) eq '/app') {
-			return PEF::Front::TemplateHtml::handler($request);
+			$handler = "PEF::Front::TemplateHtml";
 		} elsif (substr ($request->path, $lang_offset, 5) eq '/ajax'
 			|| substr ($request->path, $lang_offset, 7) eq '/submit'
 			|| substr ($request->path, $lang_offset, 4) eq '/get')
 		{
-			return PEF::Front::Ajax::handler($request);
+			$handler = "PEF::Front::Ajax";
+		}
+		if ($handler) {
+			my $defaults = prepare_defaults($request);
+			if (blessed($defaults) && $defaults->isa('PEF::Front::Response')) {
+				return $defaults->response();
+			}
+			no strict 'refs';
+			my $cref = \&{$handler . '::handler'};
+			$cref->($request, $defaults);
 		} else {
 			my $http_response =
 			  PEF::Front::Response->new(base => $request->base, status => 404);
-			if (cfg_handle_static) {
-				my $path = $request->path;
-				$path =~ s|/{2,}|/|g;
-				my @path = split /\//, $path;
-				my $valid = 1;
-				for (my $i = 0 ; $i < @path ; ++$i) {
-					if ($path[$i] eq '..') {
-						--$i;
-						if ($i < 1) {
-							$valid = 0;
-							$request->logger->(
-								{   level   => "error",
-									message => "not allowed path: " . $request->path
-								}
-							);
-							last;
-						}
-						splice @path, $i, 2;
-						--$i;
-					}
-				}
-				my $sfn = cfg_www_static_dir . $request->path;
-				if ($valid && -e $sfn && -r $sfn && -f $sfn) {
-					$http_response->status(200);
-					$http_response->set_header('content-type',
-						File::LibMagic->new->checktype_filename($sfn));
-					$http_response->set_header('content-length', -s $sfn);
-					open my $bh, "<", $sfn;
-					$http_response->set_body_handle($bh);
-				}
-			}
+			www_static_handler($request, $http_response) if cfg_handle_static;
 			return $http_response->response();
 		}
 	};

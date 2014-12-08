@@ -15,16 +15,12 @@ use PEF::Front::Response;
 use PEF::Front::Ajax;
 
 sub handler {
-	my $request  = $_[0];
-	my $form     = $request->params;
-	my $cookies  = $request->cookies;
-	my $logger   = $request->logger;
-	my $defaults = PEF::Front::Ajax::prepare_defaults($request);
-	if (blessed($defaults) && $defaults->isa('PEF::Front::Response')) {
-		return $defaults->response();
-	}
+	my ($request, $defaults) = @_;
+	my $form          = $request->params;
+	my $cookies       = $request->cookies;
+	my $logger        = $request->logger;
 	my $http_response = PEF::Front::Response->new(base => $request->base);
-	my $lang = $defaults->{lang};
+	my $lang          = $defaults->{lang};
 	$http_response->set_cookie(lang => $lang);
 	my $template = delete $defaults->{method};
 	$template =~ tr/ /_/;
