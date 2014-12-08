@@ -5,7 +5,7 @@ WriteMakefile(
 	VERSION     => "0.01",
 	INSTALLDIRS => 'site',
 	PREREQ_PM   => {
-		'DBIx::Connector'       => "0.53",
+		'DBIx::Connector'       => "0.52",
 		'Exporter'              => 1,
 		'Cache::FastMmap'       => 1,
 		'Carp'                  => 1,
@@ -35,7 +35,7 @@ WriteMakefile(
 		'utf8'                  => 1,
 		'warnings'              => 1,
 		'XML::Simple'           => "2",
-		'YAML::XS'              => "0.41",
+		'YAML::XS'              => "0.38",
 	},
 	dist => {
 		DIST_DEFAULT => 'all tardist',
