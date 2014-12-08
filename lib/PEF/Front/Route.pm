@@ -8,6 +8,7 @@ use PEF::Front::Request;
 use PEF::Front::Response;
 use PEF::Front::Ajax;
 use PEF::Front::TemplateHtml;
+use PEF::Front::NLS;
 use if cfg_handle_static(), 'File::LibMagic';
 
 my @rewrite;
@@ -156,7 +157,7 @@ sub prepare_defaults {
 			$http_response->redirect(cfg_location_error, 301);
 			return $http_response;
 		}
-		$lang = guess_lang($request);
+		$lang = PEF::Front::NLS::guess_lang($request);
 	}
 	if (($src eq 'get' || $src eq 'app') && $params ne '') {
 		$src = 'submit';
