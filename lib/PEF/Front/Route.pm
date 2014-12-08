@@ -104,6 +104,12 @@ sub rewrite {
 				$rewrite_flags = $npi->[1] if @$npi > 1;
 				$npi           = $npi->[0];
 				$npi ||= '';
+				if ($rewrite_flags and not ref $rewrite_flags) {
+					$rewrite_flags = {
+						map { my ($p, $v) = split /=/, $_, 2; (uc ($p), $v) } split /[, ]+/,
+						$rewrite_flags
+					};
+				}
 			}
 			if (%$rewrite_flags and exists $rewrite_flags->{R}) {
 				$http_response ||= PEF::Front::Response->new(base => $request->base);
