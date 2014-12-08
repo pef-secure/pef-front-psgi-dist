@@ -7,7 +7,7 @@ use PEF::Front::Config;
 use PEF::Front::Request;
 use PEF::Front::Response;
 use PEF::Front::Ajax;
-use PEF::Front::TemplateHtml;
+use PEF::Front::TemplateTT;
 use PEF::Front::NLS;
 use if cfg_handle_static(), 'File::LibMagic';
 
@@ -252,7 +252,7 @@ sub to_app {
 		my $lang_offset = (cfg_url_contains_lang) ? 3 : 0;
 		my $handler;
 		if (substr ($request->path, $lang_offset, 4) eq '/app') {
-			$handler = "PEF::Front::TemplateHtml";
+			$handler = "PEF::Front::TemplateTT";
 		} elsif (substr ($request->path, $lang_offset, 5) eq '/ajax'
 			|| substr ($request->path, $lang_offset, 7) eq '/submit'
 			|| substr ($request->path, $lang_offset, 4) eq '/get')
