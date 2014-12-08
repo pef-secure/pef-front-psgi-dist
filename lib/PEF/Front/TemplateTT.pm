@@ -1,4 +1,4 @@
-package PEF::Front::TemplateHtml;
+package PEF::Front::TemplateTT;
 
 use strict;
 use warnings;
@@ -12,7 +12,6 @@ use PEF::Front::Cache;
 use PEF::Front::Validator;
 use PEF::Front::NLS;
 use PEF::Front::Response;
-use PEF::Front::Ajax;
 
 sub handler {
 	my ($request, $defaults) = @_;
