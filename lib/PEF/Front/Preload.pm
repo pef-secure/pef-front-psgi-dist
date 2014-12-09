@@ -13,7 +13,7 @@ my %preload_parts = (
 	db_connect    => 1,
 	local_modules => 1,
 	in_filters    => 1,
-	out_filters   => 1
+	out_filters   => 1,
 );
 
 sub import {
