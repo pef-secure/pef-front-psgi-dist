@@ -82,14 +82,12 @@ sub guess_lang {
 		$lang = cfg_default_lang;
 	} elsif (not defined $lang) {
 		my $country = lc (($gi->LookUp($request->remote_ip))[0]);
-		if (defined $country) {
-			($lang) = db_connect->run(
-				sub {
-					$_->selectrow_array(q{select short_lang from geo_language where country = ?},
-						undef, $country);
-				}
-			);
-		}
+		($lang) = db_connect->run(
+			sub {
+				$_->selectrow_array(q{select short_lang from geo_language where country = ?},
+					undef, $country);
+			}
+		);
 		$lang = cfg_default_lang if not defined $lang;
 	}
 	return $lang;
