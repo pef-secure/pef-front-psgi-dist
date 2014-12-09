@@ -81,7 +81,7 @@ sub guess_lang {
 	if (cfg_no_multilang_support and not defined $lang) {
 		$lang = cfg_default_lang;
 	} elsif (not defined $lang) {
-		my $country = lc (($gi->LookUp($ENV{'REMOTE_ADDR'}))[0]);
+		my $country = lc (($gi->LookUp($request->remote_ip))[0]);
 		if (defined $country) {
 			($lang) = db_connect->run(
 				sub {
