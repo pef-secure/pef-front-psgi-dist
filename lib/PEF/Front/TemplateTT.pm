@@ -103,7 +103,7 @@ sub handler {
 		COMPILE_DIR  => cfg_template_cache,
 		V2EQUALS     => 0,
 		ENCODING     => 'UTF-8',
-
+		COMPILE_PERL => 1,
 	);
 	$tt->define_vmethod('text', model => $model);
 	$tt->define_vmethod('hash', model => $model);
