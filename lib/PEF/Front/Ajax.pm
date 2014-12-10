@@ -37,7 +37,8 @@ sub ajax {
 				|| (ref ($as) eq 'ARRAY' && !grep { $_ eq $src } @$as))
 		  )
 		{
-			$logger->({level => "error", message => "not allowed source $src"});
+			cfg_log_level_error
+			  && $logger->({level => "error", message => "not allowed source $src"});
 			$response =
 			  {result => 'INTERR', answer => 'Unallowed calling source', answer_args => []};
 			goto out;
@@ -57,12 +58,14 @@ sub ajax {
 			$cache_attr->{expires} = cfg_cache_method_expire
 			  unless exists $cache_attr->{expires};
 			$cache_key = join (":", @{$vreq}{@keys});
-			$logger->({level => "debug", message => "cache key: $cache_key"});
+			cfg_log_level_debug
+			  && $logger->({level => "debug", message => "cache key: $cache_key"});
 			$response = get_cache("ajax:$cache_key");
 		}
 		if (not $response) {
 			my $model = get_model($vreq);
-			$logger->({level => "debug", message => "model: $model"});
+			cfg_log_level_debug
+			  && $logger->({level => "debug", message => "model: $model"});
 			if (index ($model, "::") >= 0) {
 				my $class = substr ($model, 0, rindex ($model, "::"));
 				eval "use $class;\n\$response = $model(\$vreq, \$defaults)";
@@ -70,7 +73,9 @@ sub ajax {
 				$response = cfg_model_rpc($model)->send_message($vreq)->recv_message;
 			}
 			if ($@) {
-				$logger->({level => "error", message => "error: " . Dumper($model, $@, $vreq)});
+				cfg_log_level_error
+				  && $logger->(
+					{level => "error", message => "error: " . Dumper($model, $@, $vreq)});
 				$response = {result => 'INTERR', answer => 'Internal error', answer_args => []};
 				goto out;
 			}
@@ -100,7 +105,8 @@ sub ajax {
 			  ->($response, $defaults, $stash, $http_response, $tt, $logger);
 		}
 	} else {
-		$logger->(
+		cfg_log_level_error
+		  && $logger->(
 			{level => "error", message => "validate error: " . Dumper($@, \%request)});
 		$response = (
 			ref ($@) eq 'HASH'
@@ -165,7 +171,8 @@ sub ajax {
 			}
 		}
 		if (!defined ($new_loc) || $new_loc eq '') {
-			$logger->({level => "debug", message => "outputting the answer"});
+			cfg_log_level_debug
+			  && $logger->({level => "debug", message => "outputting the answer"});
 			my $ct = 'text/html; charset=utf-8';
 			if (   exists ($response->{answer_content_type})
 				&& defined ($response->{answer_content_type})
@@ -179,7 +186,8 @@ sub ajax {
 			$http_response->set_body($response->{answer});
 			return $http_response->response();
 		} else {
-			$logger->({level => "debug", message => "setting location: $new_loc"});
+			cfg_log_level_debug
+			  && $logger->({level => "debug", message => "setting location: $new_loc"});
 			$http_response->redirect($new_loc);
 			return $http_response->response();
 		}

@@ -54,6 +54,9 @@ my @std_params = qw{
   cfg_template_cache
   cfg_no_nls
   cfg_handle_static
+  cfg_log_level_info
+  cfg_log_level_error
+  cfg_log_level_debug
 };
 
 sub import {
@@ -135,6 +138,9 @@ sub std_db_user                      { "pef" }
 sub std_db_password                  { "pef-pass" }
 sub std_db_name                      { "pef" }
 sub std_cookie_unset_negative_expire { -3600 }
+sub std_log_level_info               { 1 }
+sub std_log_level_error              { 1 }
+sub std_log_level_debug              { 0 }
 
 sub std_template_dir {
 	cfg_template_dir_contains_lang()

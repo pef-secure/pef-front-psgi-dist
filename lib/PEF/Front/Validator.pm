@@ -247,7 +247,10 @@ sub make_value_parser {
 		$ret = qq~do {
 			my \$tmpl = '[% $exp %]';
 			my \$out;
-			\$tt->process_simple(\\\$tmpl, \$stash, \\\$out) or
+			\$tt->process_simple(\\\$tmpl, \$stash, \\\$out) 
+			or
+				cfg_log_level_error 
+				&& 
 				\$logger->({level => \"error\", message => 'error: $exp - ' . \$tt->error});\n
 			\$out;
 		}~;
@@ -318,14 +321,12 @@ sub make_rules_parser {
 		} elsif ($cmd eq 'add-header') {
 			for my $h (keys %{$start->{$cmd}}) {
 				my $value = make_value_parser($start->{$cmd}{$h});
-				$sub_int .=
-				  qq~\t\$http_response->add_header(~ . quote_var($h) . qq~, $value);\n~;
+				$sub_int .= "\t\$http_response->add_header(~ . quote_var($h) . qq~, $value);\n";
 			}
 		} elsif ($cmd eq 'set-header') {
 			for my $h (keys %{$start->{$cmd}}) {
 				my $value = make_value_parser($start->{$cmd}{$h});
-				$sub_int .=
-				  qq~\t\$http_response->set_header(~ . quote_var($h) . qq~, $value);\n~;
+				$sub_int .= "\t\$http_response->set_header(~ . quote_var($h) . qq~, $value);\n";
 			}
 		} elsif ($cmd eq 'filter') {
 			my $full_func;
@@ -333,20 +334,26 @@ sub make_rules_parser {
 			if (index ($start->{$cmd}, 'PEF::Core::') == 0) {
 				$full_func = $start->{$cmd};
 				$use_class = substr ($full_func, 0, rindex ($full_func, "::"));
-				$sub_int .= qq~\teval {use $use_class; $full_func(\$response, \$defaults)};\n~;
+				$sub_int .= "\teval {use $use_class; $full_func(\$response, \$defaults)};\n";
 			} else {
-				$full_func = $start->{$cmd};
+				$full_func = cfg_app_namespace . "OutFilter::" . $start->{$cmd};
 				$use_class = substr ($full_func, 0, rindex ($full_func, "::"));
-				(my $clf = $use_class) =~ s|::|/|g;
-				$full_func = cfg_app_namespace . "OutFilter::$full_func";
-				my $mrf = cfg_out_filter_dir . "/$clf.pm";
-				$sub_int .= qq~\teval {require '$mrf'; $full_func(\$response, \$defaults)};\n~;
+				eval "use $use_class;";
+				croak {
+					result  => 'INTERR',
+					answer  => 'Internal server error',
+					message => $@,
+				  }
+				  if $@;
+				$sub_int .= "\teval {$full_func(\$response, \$defaults)};\n";
 			}
-			$sub_int .=
-			    qq~\tif (\$@) {\n~
-			  . qq~\t\t\$logger->({level => \"error\", message => \"output filter: \" . Dumper($@)});\n~
-			  . qq~\t\t\$response = {result => 'INTERR', answer => 'Bad output filter'};\n\t\treturn;~
-			  . qq~\n\t}\n~;
+			$sub_int .= <<MRP;
+			if (\$@) {
+				cfg_log_level_error 
+				&& \$logger->({level => \"error\", message => \"output filter: \" . Dumper($@)});
+				\$response = {result => 'INTERR', answer => 'Bad output filter'};\n\t\treturn;
+			}
+MRP
 		} elsif ($cmd eq 'answer') {
 			$sub_int .=
 			  qq~\t\$response->{answer} = ~ . make_value_parser($start->{$cmd}) . qq~;\n~;
@@ -358,29 +365,40 @@ sub make_rules_parser {
 
 sub build_result_processor {
 	my $result_rules = $_[0];
-	my $result_sub =
-	  "sub {\n\tmy (\$response, \$defaults, \$stash, \$http_response, \$tt, \$logger) = \@_;\n"
-	  . "\tmy \$new_location;\n"
-	  . "\tmy \%rc = (\n";
+	my $result_sub   = <<RSUB;
+	sub {
+		my (\$response, \$defaults, \$stash, \$http_response, \$tt, \$logger) = \@_;
+		my \$new_location;
+		my \%rc = (
+RSUB
 	my %rc_array;
 	for my $rc (keys %{$result_rules}) {
-		$result_sub .= "\t"
-		  . quote_var($rc) . " => "
-		  . make_rules_parser($result_rules->{$rc} || {}) . ",\n";
+		my $qrc = quote_var($rc);
+		my $rsub = make_rules_parser($result_rules->{$rc} || {});
+		$result_sub .= <<RSUB;
+		  $qrc => $rsub,
+RSUB
 	}
-	$result_sub .=
-	    "\t);\n"
-	  . "\tmy \$rc;\n"
-	  . "\tif (not exists \$rc{\$response->{result}}) {\n"
-	  . "\t\tif(exists \$rc{DEFAULT}) { \$rc = 'DEFAULT' }\n"
-	  . "\t\telse {\n"
-	  . "\t\t\$logger->({level => \"error\", message => \"error: Unexpected result code: '\$response->{result}'\"});\n"
-	  . "\t\treturn (undef, {result => 'INTERR', answer => 'Bad result code'});\n"
-	  . "\t\t}\n"
-	  . "\t} else {\$rc = \$response->{result}}\n"
-	  . "\t\$rc{\$rc}->();\n"
-	  . "\treturn (\$new_location, \$response);\n" . "}\n";
-	print $result_sub;
+	$result_sub .= <<RSUB;
+		);
+		my \$rc;\n"
+		if (not exists \$rc{\$response->{result}}) {
+			if(exists \$rc{DEFAULT}) { 
+				\$rc = 'DEFAULT' 
+			} else {
+				cfg_log_level_error 
+				&& \$logger->({level => "error", 
+					message => "error: Unexpected result code: '\$response->{result}'"});
+				return (undef, {result => 'INTERR', answer => 'Bad result code'});
+			}
+		} else {
+			\$rc = \$response->{result}
+		}
+		\$rc{\$rc}->();
+		return (\$new_location, \$response);
+	}
+RSUB
+	#print $result_sub;
 	return eval $result_sub;
 }
 

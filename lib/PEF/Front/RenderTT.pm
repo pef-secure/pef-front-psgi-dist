@@ -1,4 +1,4 @@
-package PEF::Front::TemplateTT;
+package PEF::Front::RenderTT;
 
 use strict;
 use warnings;
@@ -25,7 +25,9 @@ sub handler {
 	$template =~ tr/ /_/;
 	my $template_file = "$template.html";
 	if (!-f cfg_template_dir($request->hostname, $lang) . "/" . $template_file) {
-		$logger->({level => "info", message => " template '$template_file' not found"});
+		cfg_log_level_info
+		  && $logger->(
+			{level => "info", message => " template '$template_file' not found"});
 		$http_response->status(404);
 		return $http_response->response();
 	}
@@ -53,7 +55,8 @@ sub handler {
 					|| (ref ($as) eq 'ARRAY' && !grep { $_ eq 'template' } @$as))
 			  )
 			{
-				$logger->({level => "error", message => "not allowed source"});
+				cfg_log_level_error
+				  && $logger->({level => "error", message => "not allowed source"});
 				return {
 					result      => 'INTERR',
 					answer      => 'Unallowed calling source',
@@ -75,12 +78,14 @@ sub handler {
 				$cache_attr->{expires} = cfg_cache_method_expire
 				  unless exists $cache_attr->{expires};
 				$cache_key = join (":", @{$vreq}{@keys});
-				$logger->({level => "debug", message => "cache key: $cache_key"});
+				cfg_log_level_debug
+				  && $logger->({level => "debug", message => "cache key: $cache_key"});
 				$response = get_cache("ajax:$cache_key");
 			}
 			if (not $response) {
 				my $model = get_model($vreq);
-				$logger->({level => "debug", message => "model: $model"});
+				cfg_log_level_debug
+				  && $logger->({level => "debug", message => "model: $model"});
 				if (index ($model, "::") >= 0) {
 					my $class = substr ($model, 0, rindex ($model, "::"));
 					eval "use $class;\n\$response = $model(\$vreq)";
@@ -88,7 +93,9 @@ sub handler {
 					$response = cfg_model_rpc($model)->send_message($vreq)->recv_message;
 				}
 				if ($@) {
-					$logger->({level => "error", message => "error: " . Dumper($model, $@, $vreq)});
+					cfg_log_level_error
+					  && $logger->(
+						{level => "error", message => "error: " . Dumper($model, $@, $vreq)});
 					return {result => 'INTERR', answer => 'Internal error', answer_args => []};
 				}
 				if ($response->{result} eq 'OK' && $cache_attr) {
@@ -178,7 +185,8 @@ sub handler {
 	return sub {
 		my $responder = $_[0];
 		$tt->process($template_file, $defaults, \$http_response->get_body->[0])
-		  or $logger->({level => "error", message => "error: " . $tt->error()});
+		  or cfg_log_level_error
+		  && $logger->({level => "error", message => "error: " . $tt->error()});
 		$responder->($http_response->response());
 	};
 }
