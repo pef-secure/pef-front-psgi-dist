@@ -29,7 +29,12 @@ sub add_route {
 			my @flags = split /[, ]+/, $rdest->[1] if @$rdest > 1;
 			for my $f (@flags) {
 				my ($p, $v) = split /=/, $f, 2;
-				$rewrite[$ri][$flagpos]{uc $p} = $v;
+				$p = uc $p;
+				if ($p eq 'RE' && !$v) {
+					warn "regexp rule with empty flags value: $rule -> $rdest->[0] / $rdest->[1]";
+					next;
+				}
+				$rewrite[$ri][$flagpos]{$p} = $v;
 			}
 		} elsif (ref ($rdest) && ref ($rdest) ne 'CODE') {
 			die "bad routing rule at $rule";
