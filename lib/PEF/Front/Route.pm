@@ -245,7 +245,7 @@ sub to_app {
 				|| substr ($request->path, 0, 3) ne '/')
 		  )
 		{
-			my $lang = guess_lang($request);
+			my $lang = PEF::Front::NLS::guess_lang($request);
 			if ($request->method eq 'GET') {
 				my $http_response = PEF::Front::Response->new(base => $request->base);
 				$http_response->redirect("/$lang" . $request->request_uri, 301);
