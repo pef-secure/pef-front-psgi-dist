@@ -249,7 +249,7 @@ sub make_value_parser {
 			my \$out;
 			\$tt->process_simple(\\\$tmpl, \$stash, \\\$out) 
 			or
-				cfg_log_level_error 
+				cfg_log_level_error()
 				&& 
 				\$logger->({level => \"error\", message => 'error: $exp - ' . \$tt->error});\n
 			\$out;
@@ -349,7 +349,7 @@ sub make_rules_parser {
 			}
 			$sub_int .= <<MRP;
 			if (\$@) {
-				cfg_log_level_error 
+				cfg_log_level_error()
 				&& \$logger->({level => \"error\", message => \"output filter: \" . Dumper($@)});
 				\$response = {result => 'INTERR', answer => 'Bad output filter'};\n\t\treturn;
 			}
@@ -386,7 +386,7 @@ RSUB
 			if(exists \$rc{DEFAULT}) { 
 				\$rc = 'DEFAULT' 
 			} else {
-				cfg_log_level_error 
+				cfg_log_level_error()
 				&& \$logger->({level => "error", 
 					message => "error: Unexpected result code: '\$response->{result}'"});
 				return (undef, {result => 'INTERR', answer => 'Bad result code'});
