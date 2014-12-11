@@ -384,7 +384,7 @@ RSUB
 		my \$rc;\n"
 		if (not exists \$rc{\$response->{result}}) {
 			if(exists \$rc{DEFAULT}) { 
-				\$rc = 'DEFAULT' 
+				\$rc = 'DEFAULT';
 			} else {
 				cfg_log_level_error()
 				&& \$logger->({level => "error", 
@@ -398,7 +398,7 @@ RSUB
 		return (\$new_location, \$response);
 	}
 RSUB
-	#print $result_sub;
+	print $result_sub;
 	return eval $result_sub;
 }
 
