@@ -70,7 +70,8 @@ sub path {
 			$self->{path} = '/';
 		} else {
 			if (substr ($np, 0, 1) ne '/') {
-				$self->{path} = substr ($self->{path}, rindex ($self->{path}, '/') + 1) . $np;
+				$self->{path} =
+				  substr ($self->{path}, 0, rindex ($self->{path}, '/') + 1) . $np;
 			} else {
 				$self->{path} = $np;
 			}
