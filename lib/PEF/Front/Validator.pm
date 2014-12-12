@@ -80,39 +80,6 @@ sub build_validator {
 				  . "answer_args => ['param-$pr']} "
 				  . "unless $jsn {$pr} =~ m/$mr->{regex}/;\n";
 			}
-			if (exists ($mr->{filter})) {
-				if ($mr->{filter} =~ /^\w+::/) {
-					my $fcall = cfg_app_namespace . "InFilter::$mr->{filter}($jsn {$pr}, \$_[1]);";
-					$sub_test .= "eval { $jsn {$pr} = $fcall};\n";
-					if (exists ($mr->{optional}) && $mr->{optional}) {
-						$sub_test .= <<VLT;
-if(\$@) {
-	delete $jsn {$pr}; 
-	cfg_log_level_info()
-	&& \$logger->({level => "info", message => "dropped optional parameter $pr: input filter: " . Dumper(\$@)});
-}
-VLT
-					} else {
-						$sub_test .= <<VLT;
-if(\$@) {
-	cfg_log_level_error()
-	&& \$logger->({level => "error", message => "input filter: " . Dumper(\$@)});
-	croak {result => 'BADPARAM', answer => 'Bad parameter \$1', answer_args => ['param-$pr']};
-}
-VLT
-					}
-					my $cl = cfg_app_namespace . "InFilter::$mr->{filter}";
-					push @add_use, substr ($cl, 0, rindex ($cl, "::"));
-				} else {
-					my $rearr =
-					    ref ($mr->{filter}) eq 'ARRAY' ? $mr->{filter}
-					  : ref ($mr->{filter})            ? []
-					  :                                  [$mr->{filter}];
-					for my $re (@$rearr) {
-						$sub_test .= "$jsn {$pr} =~ $re;\n" if $re =~ /^(s|tr|y)\b/;
-					}
-				}
-			}
 			if (exists ($mr->{captcha}) && $mr->{captcha} ne '') {
 				$sub_test .=
 				    "if($jsn {$pr} ne 'nocheck') {\n"
@@ -200,6 +167,39 @@ VLT
 					$check_defaults .= ' and' if $check_defaults;
 					$validator_sub .=
 					  "$jsn {$pr} = $default if $check_defaults not exists $jsn {$pr};\n";
+				}
+			}
+			if (exists ($mr->{filter})) {
+				if ($mr->{filter} =~ /^\w+::/) {
+					my $fcall = cfg_app_namespace . "InFilter::$mr->{filter}($jsn {$pr}, \$_[1]);";
+					$sub_test .= "eval { $jsn {$pr} = $fcall};\n";
+					if (exists ($mr->{optional}) && $mr->{optional}) {
+						$sub_test .= <<VLT;
+if(\$@) {
+	delete $jsn {$pr}; 
+	cfg_log_level_info()
+	&& \$logger->({level => "info", message => "dropped optional parameter $pr: input filter: " . Dumper(\$@)});
+}
+VLT
+					} else {
+						$sub_test .= <<VLT;
+if(\$@) {
+	cfg_log_level_error()
+	&& \$logger->({level => "error", message => "input filter: " . Dumper(\$@)});
+	croak {result => 'BADPARAM', answer => 'Bad parameter \$1', answer_args => ['param-$pr']};
+}
+VLT
+					}
+					my $cl = cfg_app_namespace . "InFilter::$mr->{filter}";
+					push @add_use, substr ($cl, 0, rindex ($cl, "::"));
+				} else {
+					my $rearr =
+					    ref ($mr->{filter}) eq 'ARRAY' ? $mr->{filter}
+					  : ref ($mr->{filter})            ? []
+					  :                                  [$mr->{filter}];
+					for my $re (@$rearr) {
+						$sub_test .= "$jsn {$pr} =~ $re;\n" if $re =~ /^(s|tr|y)\b/;
+					}
 				}
 			}
 			if (exists ($mr->{optional}) && $mr->{optional} eq 'empty') {

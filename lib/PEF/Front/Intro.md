@@ -92,6 +92,9 @@ Root application direcory is guessed from filepath to configuraton module.
 * `cfg_handle_static` -- application will serve static files;
 * `cfg_in_filter_dir` -- directory with input data filters
 * `cfg_location_error` -- redirect location when internal routing fails
+* `cfg_log_level_info` -- turns on or off log level 'info'
+* `cfg_log_level_error` -- turns on or off log level 'error'
+* `cfg_log_level_debug` -- turns on or off log level 'debug'
 * `cfg_model_dir` -- YAML-files with descriptions of model methods
 * `cfg_model_local_dir` -- local model method handlers
 * `cfg_model_rpc` -- this function returns object to call remote model
@@ -418,7 +421,10 @@ sub filter {
 1;
 ```
 
-`filter` can be one substitutional regexp, array of  substitutional regexps or filtering function which returns changed field value. Recognized substitutional regexp operators are: `s`, `tr`, `y`.
+`filter` can be one substitutional regexp, array of  substitutional regexps or 
+filtering function which returns changed field value. Recognized substitutional 
+regexp operators are: `s`, `tr`, `y`. When filtering function throws exception then
+if parameter is optional it is deleted from request else it means validation error.
 
 ##### Output filters
 
@@ -527,6 +533,8 @@ Uploaded files are stored in `cfg_upload_dir`/$$ direcory, every working process
 Uploaded files are objects of `PEF::Front::File` in corresponding form fields. They are deleted after request's end, so local handlers must move or link that files into some permanent storage before that.
 
 #### Upload progress
+
+_Highly exerimental_
 
 To obtain upload progress information there's must be special field `file_field_id` put in form before file input field `file_field`. The content of this field `file_field_id` is used as id to get upload progress info by some AJAX-function.
 Model method description for this AJAX-request must have `PEF::Front::UploadProgress::get_progress` as `model` value. This model method returns response like `{result => 'OK', done => $done, size => $size}`. 
