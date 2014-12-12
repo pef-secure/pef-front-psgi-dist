@@ -66,7 +66,7 @@ sub path {
 	$self->{path} ||= decode_utf8($self->{env}{PATH_INFO} || '/');
 	if (@_ == 2) {
 		my $np = (utf8::is_utf8($_[1]) ? $_[1] : decode_utf8 $_[1]);
-		if ($np eq '') {
+		if (not defined $np or $np =~ /^\s*$/) {
 			$self->{path} = '/';
 		} else {
 			if (substr ($np, 0, 1) ne '/') {
