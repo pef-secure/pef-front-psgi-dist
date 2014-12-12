@@ -82,10 +82,25 @@ sub build_validator {
 			}
 			if (exists ($mr->{filter})) {
 				if ($mr->{filter} =~ /^\w+::/) {
-					$sub_test .=
-					    "$jsn {$pr} = "
-					  . cfg_app_namespace
-					  . "InFilter::$mr->{filter}($jsn {$pr}, \$_[1]);\n";
+					my $fcall = cfg_app_namespace . "InFilter::$mr->{filter}($jsn {$pr}, \$_[1]);";
+					$sub_test .= "eval { $jsn {$pr} = $fcall};\n";
+					if (exists ($mr->{optional}) && $mr->{optional}) {
+						$sub_test .= <<VLT;
+if(\$@) {
+	delete $jsn {$pr}; 
+	cfg_log_level_info()
+	&& \$logger->({level => "info", message => "dropped optional parameter $pr: input filter: " . Dumper(\$@)});
+}
+VLT
+					} else {
+						$sub_test .= <<VLT;
+if(\$@) {
+	cfg_log_level_error()
+	&& \$logger->({level => "error", message => "input filter: " . Dumper(\$@)});
+	croak {result => 'BADPARAM', answer => 'Bad parameter \$1', answer_args => ['param-$pr']};
+}
+VLT
+					}
 					my $cl = cfg_app_namespace . "InFilter::$mr->{filter}";
 					push @add_use, substr ($cl, 0, rindex ($cl, "::"));
 				} else {
@@ -350,7 +365,7 @@ sub make_rules_parser {
 			$sub_int .= <<MRP;
 			if (\$@) {
 				cfg_log_level_error()
-				&& \$logger->({level => "error", message => "output filter: " . Dumper($@)});
+				&& \$logger->({level => "error", message => "output filter: " . Dumper(\$@)});
 				\$response = {result => 'INTERR', answer => 'Bad output filter'};
 				return;
 			}

@@ -132,7 +132,10 @@ sub _parse_urlencoded {
 		my ($name, $value) =
 		  map { tr/+/ /; s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg; $_ }
 		  split (/=/, $pair, 2);
-		eval { $form->{decode_utf8($name)} = decode_utf8 $value if $name };
+		eval {
+			$form->{decode_utf8($name)} = decode_utf8 $value
+			  if defined $name and $name ne '';
+		};
 	}
 	return $form;
 }
