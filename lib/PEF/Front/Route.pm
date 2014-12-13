@@ -12,6 +12,7 @@ use PEF::Front::NLS;
 use if cfg_handle_static(), 'File::LibMagic';
 use Encode;
 use URI::Escape;
+use Data::Dumper;
 
 my @rewrite;
 my $rulepos = 0;
@@ -270,6 +271,7 @@ sub to_app {
 			}
 			no strict 'refs';
 			my $cref = \&{$handler . '::handler'};
+			print STDERR Dumper ($request, $defaults);
 			$cref->($request, $defaults);
 		} else {
 			my $http_response =
