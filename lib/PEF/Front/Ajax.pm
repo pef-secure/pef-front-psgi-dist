@@ -16,6 +16,7 @@ use PEF::Front::Response;
 
 sub ajax {
 	my ($request, $defaults) = @_;
+	print STDERR Dumper ($request, $defaults);
 	my $form          = $request->params;
 	my $cookies       = $request->cookies;
 	my $logger        = $request->logger;
