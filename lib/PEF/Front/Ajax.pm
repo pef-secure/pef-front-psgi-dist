@@ -16,6 +16,7 @@ use PEF::Front::Response;
 
 sub ajax {
 	my ($request, $defaults) = @_;
+	print STDERR Dumper \@_;
 	my $form          = $request->params;
 	my $cookies       = $request->cookies;
 	my $logger        = $request->logger;
@@ -23,7 +24,7 @@ sub ajax {
 	my $lang          = $defaults->{lang};
 	my %request       = %$form;
 	my $src           = $defaults->{src};
-	$request{method} = $defaults->{method};
+	$request{method}  = $defaults->{method};
 	$http_response->set_cookie(lang => $lang);
 	my $vreq = eval { validate(\%request, $defaults) };
 	my $response;

@@ -169,24 +169,20 @@ sub prepare_defaults {
 	if (($src eq 'get' || $src eq 'app') && $params ne '') {
 		$src = 'submit';
 		my @params = split /\//, $params;
+		my $i = 1;
 		for my $pv (@params) {
 			my ($p, $v) = map { tr/+/ /; decode_utf8 $_} split /-/, uri_unescape($pv), 2;
 			if (!defined ($v)) {
 				$v = $p;
 				$p = 'cookie';
-			}
-			if (not exists $form->{$p}) {
-				$form->{$p} = $v;
-			} else {
-				if (ref ($form->{$p})) {
-					push @{$form->{$p}}, $v;
-				} else {
-					$form->{$p} = [$form->{$p}, $v];
+				if (exists $form->{$p}) {
+					$p = "get_param_$i";
+					++$i;
 				}
 			}
+			$form->{$p} = $v;
 		}
 	}
-	my $ucMethod = $method;
 	$method =~ s/[[:lower:]]\K([[:upper:]])/ \l$1/g;
 	$method = lcfirst $method;
 	return {
