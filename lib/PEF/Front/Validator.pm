@@ -178,14 +178,14 @@ sub build_validator {
 if(\$@) {
 	delete $jsn {$pr}; 
 	cfg_log_level_info()
-	&& \$logger->({level => "info", message => "dropped optional parameter $pr: input filter: " . Dumper(\$@)});
+	&& $def {request}->logger->({level => "info", message => "dropped optional parameter $pr: input filter: " . Dumper(\$@)});
 }
 VLT
 					} else {
 						$sub_test .= <<VLT;
 if(\$@) {
 	cfg_log_level_error()
-	&& \$logger->({level => "error", message => "input filter: " . Dumper(\$@)});
+	&& $def {request}->logger->({level => "error", message => "input filter: " . Dumper(\$@)});
 	croak {result => 'BADPARAM', answer => 'Bad parameter \$1', answer_args => ['param-$pr']};
 }
 VLT
