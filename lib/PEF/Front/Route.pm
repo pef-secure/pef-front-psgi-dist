@@ -10,6 +10,8 @@ use PEF::Front::Ajax;
 use PEF::Front::RenderTT;
 use PEF::Front::NLS;
 use if cfg_handle_static(), 'File::LibMagic';
+use Encode;
+use URI::Escape;
 
 my @rewrite;
 my $rulepos = 0;
