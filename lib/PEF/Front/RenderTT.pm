@@ -115,28 +115,28 @@ sub handler {
 	$tt->define_vmethod('hash', model => $model);
 	$tt->define_vmethod(
 		'text',
-		_ => sub {
+		m => sub {
 			my ($msgid, @params) = @_;
 			msg_get($lang, $msgid, @params)->{message};
 		}
 	);
 	$tt->define_vmethod(
 		'text',
-		_n => sub {
+		mn => sub {
 			my ($msgid, $num, @params) = @_;
 			msg_get_n($lang, $msgid, $num, @params)->{message};
 		}
 	);
 	$tt->define_vmethod(
 		'text',
-		_l => sub {
+		ml => sub {
 			my ($msgid, $tlang, @params) = @_;
 			msg_get($tlang, $msgid, @params)->{message};
 		}
 	);
 	$tt->define_vmethod(
 		'text',
-		_nl => sub {
+		mnl => sub {
 			my ($msgid, $num, $tlang, @params) = @_;
 			msg_get_n($tlang, $msgid, $num, @params)->{message};
 		}
