@@ -22,6 +22,7 @@ WriteMakefile(
 		'Geo::IPfree'           => 0,
 		'IO::Socket'            => 0,
 		'JSON'                  => 0,
+		'Locale::PO'            => 0,
 		'MLDBM'                 => 0,
 		'MLDBM::Sync'           => "0.30",
 		'POSIX'                 => 0,

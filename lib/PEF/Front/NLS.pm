@@ -4,6 +4,7 @@ use warnings;
 use PEF::Front::Config;
 use PEF::Front::Connector;
 use Geo::IPfree;
+use JSON;
 use base 'Exporter';
 
 our @EXPORT = qw{
@@ -14,21 +15,21 @@ sub msg_peek {
 	my ($lang, $msgid) = @_;
 	my $found = 1;
 	my $id_nls_msgid;
-	my $message;
+	my $message_json;
 	if (cfg_no_nls) {
-		$message = $msgid;
+		$message_json = to_json([$msgid]);
 	} else {
 		db_connect->run(
 			sub {
-				($message, $id_nls_msgid) = $_->selectrow_array(
+				($message_json, $id_nls_msgid) = $_->selectrow_array(
 					q{
-						select message, id_nls_msgid
+						select message_json, id_nls_msgid
 						from nls_message join nls_msgid using (id_nls_msgid)
-						where msgid = ? and short_lang = ?
+						where msgid = ? and short = ?
 					},
 					undef, $msgid, $lang
 				);
-				if (not defined $message) {
+				if (not defined $message_json) {
 					$found = 0;
 					($id_nls_msgid) = $_->selectrow_array(
 						q{
@@ -39,12 +40,11 @@ sub msg_peek {
 						undef, $msgid
 					);
 				}
-				return $message;
 			}
 		);
 	}
 	return {
-		message      => $message,
+		message_json => $message_json,
 		found        => $found,
 		msgid        => $msgid,
 		id_nls_msgid => $id_nls_msgid
@@ -54,21 +54,102 @@ sub msg_peek {
 sub msg_get {
 	my ($lang, $msgid, @params) = @_;
 	my $ret = msg_peek($lang, $msgid);
+	my $decode_msg = sub {
+		my $msgstr = eval { from_json $ret->{message_json} };
+		if ($@) {
+			$ret->{found} = 0;
+			warn "from_json: $@";
+		} else {
+			$ret->{message} = $msgstr->[0];
+		}
+	};
 	if (not $ret->{found}) {
 		if (not cfg_no_multilang_support and defined $ret->{id_nls_msgid}) {
 			my ($alt_lang) = db_connect->run(
 				sub {
-					$_->selectrow_array(q{select alt_lang from language where short_lang = ?},
+					$_->selectrow_array(q{select alternative from nls_lang where short = ?},
 						undef, $lang);
 				}
 			);
 			$alt_lang ||= cfg_default_lang;
 			$ret = msg_peek($lang, $msgid);
 		}
-		$ret->{message} = $msgid if not $ret->{found};
+		if ($ret->{found}) {
+			$decode_msg->();
+		}
+	} else {
+		if (cfg_no_nls) {
+			$ret->{message} = $msgid;
+		} else {
+			$decode_msg->();
+		}
 	}
+	$ret->{message} = $msgid if not $ret->{found};
 	$ret->{message} =~ s/\$(\d+)/$params[$1-1]/g if @params;
 	delete $ret->{id_nls_msgid};
+	delete $ret->{message_json};
+	return $ret;
+}
+
+my %plurals_sub = ();
+
+sub msg_get_n {
+	my ($lang, $msgid, $num, @params) = @_;
+	my $ret           = msg_peek($lang, $msgid);
+	my $selected_lang = $lang;
+	my $decode_msg    = sub {
+		my $idx = 0;
+		if (not exists $plurals_sub{$selected_lang}) {
+			my $plural_forms = db_connect->run(
+				sub {
+					$_->selectrow_array(q{select plural_forms from nls_lang where short = ?},
+						undef, $selected_lang);
+				}
+			);
+			my $sub = eval "sub {my \$n = \$_[0]; $plural_forms}";
+			if ($sub) {
+				$plurals_sub{$selected_lang} = $sub;
+			} else {
+				warn "plural_forms($selected_lang): $@";
+			}
+		}
+		if (exists $plurals_sub{$selected_lang}) {
+			$idx = $plurals_sub{$selected_lang}->($num);
+		}
+		my $msgstr = eval { from_json $ret->{message_json} };
+		if ($@) {
+			$ret->{found} = 0;
+			warn "from_json: $@";
+		} else {
+			$ret->{message} = $msgstr->[$idx];
+		}
+	};
+	if (not $ret->{found}) {
+		if (not cfg_no_multilang_support and defined $ret->{id_nls_msgid}) {
+			my ($alt_lang) = db_connect->run(
+				sub {
+					$_->selectrow_array(q{select alternative from nls_lang where short = ?},
+						undef, $lang);
+				}
+			);
+			$alt_lang ||= cfg_default_lang;
+			$ret = msg_peek($lang, $msgid);
+			$selected_lang = $alt_lang if $ret->{found};
+		}
+		if ($ret->{found}) {
+			$decode_msg->();
+		}
+	} else {
+		if (cfg_no_nls) {
+			$ret->{message} = $msgid;
+		} else {
+			$decode_msg->();
+		}
+	}
+	$ret->{message} = $msgid if not $ret->{found};
+	$ret->{message} =~ s/\$(\d+)/$params[$1-1]/g if @params;
+	delete $ret->{id_nls_msgid};
+	delete $ret->{message_json};
 	return $ret;
 }
 
@@ -84,7 +165,7 @@ sub guess_lang {
 		my $country = lc (($gi->LookUp($request->remote_ip))[0]);
 		($lang) = db_connect->run(
 			sub {
-				$_->selectrow_array(q{select short_lang from geo_language where country = ?},
+				$_->selectrow_array(q{select short from geo_language where country = ?},
 					undef, $country);
 			}
 		);
