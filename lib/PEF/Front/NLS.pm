@@ -17,7 +17,7 @@ sub msg_peek {
 	my $id_nls_msgid;
 	my $message_json;
 	if (cfg_no_nls) {
-		$message_json = to_json([$msgid]);
+		$message_json = encode_json([$msgid]);
 	} else {
 		db_connect->run(
 			sub {
@@ -55,10 +55,10 @@ sub msg_get {
 	my ($lang, $msgid, @params) = @_;
 	my $ret = msg_peek($lang, $msgid);
 	my $decode_msg = sub {
-		my $msgstr = eval { from_json $ret->{message_json} };
+		my $msgstr = eval { decode_json $ret->{message_json} };
 		if ($@) {
 			$ret->{found} = 0;
-			warn "from_json: $@";
+			warn "decode_json: $@";
 		} else {
 			$ret->{message} = $msgstr->[0];
 		}
@@ -116,10 +116,10 @@ sub msg_get_n {
 		if (exists $plurals_sub{$selected_lang}) {
 			$idx = $plurals_sub{$selected_lang}->($num);
 		}
-		my $msgstr = eval { from_json $ret->{message_json} };
+		my $msgstr = eval { decode_json $ret->{message_json} };
 		if ($@) {
 			$ret->{found} = 0;
-			warn "from_json: $@";
+			warn "decode_json: $@";
 		} else {
 			$ret->{message} = $msgstr->[$idx];
 		}

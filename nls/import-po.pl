@@ -121,10 +121,10 @@ for my $msg (@$aref) {
 	}
 	if (@$msgstr > 1 || $msgstr->[0] ne '') {
 		if ($nls_message) {
-			if (to_json($msgstr) ne $nls_message->{message_json}) {
+			if (encode_json($msgstr) ne $nls_message->{message_json}) {
 				$_->do(
 					'update nls_message set message_json = ? where id_nls_msgid = ? and short = ?',
-					undef, to_json($msgstr), $nls_msgid->{id_nls_msgid}, $nls_lang->{short}
+					undef, encode_json($msgstr), $nls_msgid->{id_nls_msgid}, $nls_lang->{short}
 				);
 				++$updated;
 			}
@@ -134,7 +134,7 @@ for my $msg (@$aref) {
 					$_->do(
 						'insert into nls_message (id_nls_msgid, short, message_json) values(?, ?, ?)',
 						undef, $nls_msgid->{id_nls_msgid},
-						$nls_lang->{short}, to_json($msgstr)
+						$nls_lang->{short}, encode_json($msgstr)
 					);
 				}
 			);
