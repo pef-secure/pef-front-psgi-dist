@@ -122,9 +122,13 @@ for my $msg (@$aref) {
 	if (@$msgstr > 1 || $msgstr->[0] ne '') {
 		if ($nls_message) {
 			if (encode_json($msgstr) ne $nls_message->{message_json}) {
-				$_->do(
-					'update nls_message set message_json = ? where id_nls_msgid = ? and short = ?',
-					undef, encode_json($msgstr), $nls_msgid->{id_nls_msgid}, $nls_lang->{short}
+				$conn->run(
+					sub {
+						$_->do(
+							'update nls_message set message_json = ? where id_nls_msgid = ? and short = ?',
+							undef, encode_json($msgstr), $nls_msgid->{id_nls_msgid}, $nls_lang->{short}
+						);
+					}
 				);
 				++$updated;
 			}
