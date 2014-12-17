@@ -52,7 +52,7 @@ sub db_connect {
 	$conn;
 }
 
-my $aref = Locale::PO->load_file_asarray($fname, "UTF-8");
+my $aref = Locale::PO->load_file_asarray($fname);
 
 if (Locale::PO->dequote($aref->[0]->msgid) ne '') {
 	die "unknown PO-file format $fname";
@@ -84,18 +84,20 @@ for my $msg (@$aref) {
 	my $nls_msgid = $conn->run(
 		sub {
 			$_->selectrow_hashref('select * from nls_msgid where msgid = ?',
-				undef, Locale::PO->dequote($msg->msgid));
+				undef, Locale::PO->dequote(decode_utf8 $msg->msgid));
 		}
 	);
-	my $msgctxt = $msg->msgctxt;
+	my $msgctxt = decode_utf8 $msg->msgctxt;
 	$msgctxt = Locale::PO->dequote($msgctxt) if defined $msgctxt;
 	if (!$nls_msgid) {
 		$nls_msgid = $conn->run(
 			sub {
-				$_->do('insert into nls_msgid (msgid, context) values(?, ?)',
-					undef, Locale::PO->dequote($msg->msgid), $msgctxt);
+				$_->do(
+					'insert into nls_msgid (msgid, context) values(?, ?)', undef,
+					Locale::PO->dequote(decode_utf8 $msg->msgid),          $msgctxt
+				);
 				$_->selectrow_hashref('select * from nls_msgid where msgid = ?',
-					undef, Locale::PO->dequote($msg->msgid));
+					undef, Locale::PO->dequote(decode_utf8 $msg->msgid));
 			}
 		);
 	}
@@ -111,23 +113,24 @@ for my $msg (@$aref) {
 
 	my $msgstr;
 	if ($msg->msgstr) {
-		$msgstr = [Locale::PO->dequote($msg->msgstr)];
+		$msgstr = [Locale::PO->dequote(decode_utf8 $msg->msgstr)];
 	} elsif ($msg->msgstr_n && %{$msg->msgstr_n}) {
 		my $hrf = $msg->msgstr_n;
 		$msgstr = [];
 		my %msgh = %{$msg->msgstr_n};
 		for my $km (keys %msgh) {
-			$msgstr->[$km] = Locale::PO->dequote($msgh{$km});
+			$msgstr->[$km] = Locale::PO->dequote(decode_utf8 $msgh{$km});
 		}
 	}
 	if (@$msgstr > 1 || $msgstr->[0] ne '') {
 		if ($nls_message) {
-			if (encode_json($msgstr) ne $nls_message->{message_json}) {
+			if (to_json($msgstr) ne $nls_message->{message_json}) {
 				$conn->run(
 					sub {
 						$_->do(
 							'update nls_message set message_json = ? where id_nls_msgid = ? and short = ?',
-							undef, decode_utf8(encode_json($msgstr)), $nls_msgid->{id_nls_msgid}, $nls_lang->{short}
+							undef, to_json($msgstr), $nls_msgid->{id_nls_msgid},
+							$nls_lang->{short}
 						);
 					}
 				);
@@ -139,7 +142,7 @@ for my $msg (@$aref) {
 					$_->do(
 						'insert into nls_message (id_nls_msgid, short, message_json) values(?, ?, ?)',
 						undef, $nls_msgid->{id_nls_msgid},
-						$nls_lang->{short}, encode_json($msgstr)
+						$nls_lang->{short}, to_json($msgstr)
 					);
 				}
 			);
