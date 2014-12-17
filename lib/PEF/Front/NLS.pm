@@ -106,7 +106,7 @@ sub msg_get_n {
 						undef, $selected_lang);
 				}
 			);
-			my $sub = eval "sub {my \$n = \$_[0]; $plural_forms}";
+			my $sub = eval "sub {my \$n = \$_[0]; 0 + ($plural_forms)}";
 			if ($sub) {
 				$plurals_sub{$selected_lang} = $sub;
 			} else {
@@ -155,20 +155,58 @@ sub msg_get_n {
 
 my $gi = Geo::IPfree->new;
 
+sub check_avail_lang {
+	my $lang = $_[0];
+	my ($avail) = db_connect->run(
+		sub {
+			$_->selectrow_array(q{select short from nls_lang where short = ? and is_active},
+				undef, $lang);
+		}
+	);
+	defined $avail;
+}
+
 sub guess_lang {
 	my $request    = $_[0];
 	my $cookie_ref = $request->cookies;
 	my $lang = (exists ($cookie_ref->{'lang'}) ? $cookie_ref->{'lang'} : undef);
-	if (cfg_no_multilang_support and not defined $lang) {
+	$lang = undef if $lang ne cfg_default_lang and not check_avail_lang $lang;
+	if (cfg_no_multilang_support and not $lang) {
 		$lang = cfg_default_lang;
-	} elsif (not defined $lang) {
-		my $country = lc (($gi->LookUp($request->remote_ip))[0]);
-		($lang) = db_connect->run(
-			sub {
-				$_->selectrow_array(q{select short from geo_language where country = ?},
-					undef, $country);
+	} elsif (not $lang) {
+		my $al = $request->header('Accept-Language');
+		if ($al) {
+			my @al = reverse sort {
+				if ($a->{pref} == 1 && $b->{pref} == 1) {
+					-1;
+				} else {
+					$a->{pref} <=> $b->{pref};
+				}
+			  }
+			  map {
+				my ($l, undef, $q) = $_ =~ /([\w-]+)(;\s*q=)?(\d\.\d+)?/;
+				$l =~ s/-.*//;
+				$q
+				  ? {short => $l, pref => $q}
+				  : {short => $l, pref => 1}
+			  } split /,/, $al;
+			for my $tl (@al) {
+				if (check_avail_lang $tl) {
+					$lang = $tl;
+					last;
+				}
 			}
-		);
+		}
+		if (not $lang) {
+			my $country = lc (($gi->LookUp($request->remote_ip))[0]);
+			($lang) = db_connect->run(
+				sub {
+					$_->selectrow_array(q{select short from geo_language where country = ?},
+						undef, $country);
+				}
+			);
+			$lang = cfg_default_lang if not check_avail_lang $lang;
+		}
 		$lang = cfg_default_lang if not defined $lang;
 	}
 	return $lang;
