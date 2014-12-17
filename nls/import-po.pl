@@ -126,7 +126,7 @@ for my $msg (@$aref) {
 					sub {
 						$_->do(
 							'update nls_message set message_json = ? where id_nls_msgid = ? and short = ?',
-							undef, encode_json($msgstr), $nls_msgid->{id_nls_msgid}, $nls_lang->{short}
+							undef, decode_utf8(encode_json($msgstr)), $nls_msgid->{id_nls_msgid}, $nls_lang->{short}
 						);
 					}
 				);
