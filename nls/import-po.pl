@@ -2,6 +2,7 @@
 use DBIx::Connector;
 use Locale::PO;
 use JSON;
+use Encode;
 
 my $dbuser = ((getpwuid $>)[0]);
 my $dbname = $dbuser;
