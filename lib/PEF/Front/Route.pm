@@ -234,12 +234,13 @@ sub www_static_handler {
 		$http_response->set_body_handle($bh);
 	}
 }
+
 sub to_app {
 	sub {
 		my $request       = PEF::Front::Request->new($_[0]);
 		my $http_response = rewrite_route($request);
 		return $http_response->response() if $http_response;
-		if (cfg_url_contains_lang && substr ($request->path, 0, 3) ne '/') {
+		if (cfg_url_contains_lang && substr ($request->path, 3, 1) ne '/') {
 			my $lang = PEF::Front::NLS::guess_lang($request);
 			if ($request->method eq 'GET') {
 				$http_response = PEF::Front::Response->new(base => $request->base);
