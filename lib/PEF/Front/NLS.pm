@@ -176,9 +176,11 @@ sub guess_lang {
 	} elsif (not $lang) {
 		my $al = $request->header('Accept-Language');
 		if ($al) {
-			my @al = reverse sort {
+			my @al = map { $_->{short} }
+			  reverse
+			  sort {
 				if ($a->{pref} == 1 && $b->{pref} == 1) {
-					-1;
+					1;
 				} else {
 					$a->{pref} <=> $b->{pref};
 				}
@@ -189,8 +191,12 @@ sub guess_lang {
 				$q
 				  ? {short => $l, pref => $q}
 				  : {short => $l, pref => 1}
-			  } split /,/, $al;
+			  }
+			  split /,/, $al;
+			my %alset;
 			for my $tl (@al) {
+				next if exists $alset{$tl};
+				$alset{$tl->{short}} = undef;
 				if (check_avail_lang $tl) {
 					$lang = $tl;
 					last;
