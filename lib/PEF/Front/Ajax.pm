@@ -24,7 +24,7 @@ sub ajax {
 	my %request       = %$form;
 	my $src           = $defaults->{src};
 	$request{method} = $defaults->{method};
-	$http_response->set_cookie(lang => $lang);
+	$http_response->set_cookie(lang => {value => $lang, path => "/"});
 	my $vreq = eval { validate(\%request, $defaults) };
 	my $response;
 	my $json = $src eq 'ajax';
@@ -193,6 +193,7 @@ sub ajax {
 		}
 	}
 }
+
 sub handler {
 	my ($request, $defaults) = @_;
 	return sub {

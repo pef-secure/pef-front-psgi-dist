@@ -20,7 +20,7 @@ sub handler {
 	my $logger        = $request->logger;
 	my $http_response = PEF::Front::Response->new(base => $request->base);
 	my $lang          = $defaults->{lang};
-	$http_response->set_cookie(lang => $lang);
+	$http_response->set_cookie(lang => {value => $lang, path => "/"});
 	my $template = delete $defaults->{method};
 	$template =~ tr/ /_/;
 	my $template_file = "$template.html";
