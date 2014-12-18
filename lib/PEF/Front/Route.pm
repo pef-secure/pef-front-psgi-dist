@@ -241,7 +241,7 @@ sub to_app {
 		my $http_response = rewrite_route($request);
 		return $http_response->response() if $http_response;
 		if (cfg_url_contains_lang
-			&& ($request->path < 4 || substr ($request->path, 3, 1) ne '/'))
+			&& (length ($request->path) < 4 || substr ($request->path, 3, 1) ne '/'))
 		{
 			my $lang = PEF::Front::NLS::guess_lang($request);
 			if ($request->method eq 'GET') {
@@ -254,7 +254,7 @@ sub to_app {
 		}
 		my $lang_offset = (cfg_url_contains_lang) ? 3 : 0;
 		my $handler;
-		if ($request->path > $lang_offset + 4) {
+		if (length ($request->path) > $lang_offset + 4) {
 			if (substr ($request->path, $lang_offset, 4) eq '/app') {
 				$handler = "PEF::Front::RenderTT";
 			} elsif (substr ($request->path, $lang_offset, 5) eq '/ajax'
