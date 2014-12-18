@@ -112,41 +112,41 @@ sub import {
 	}
 }
 
-sub std_no_nls ()                     { 0 }
-sub std_model_rpc_admin_port()        { 5500 }
-sub std_model_rpc_site_port ()        { 4500 }
-sub std_model_rpc_admin_addr()        { '172.16.0.1' }
-sub std_model_rpc_site_addr ()        { '172.16.0.1' }
-sub std_template_cache ()             { "$project_dir/var/tt_cache" }
-sub std_location_error ()             { "/appError?msgid=Internal\%20Error" }
-sub std_db_reconnect_trys ()          { 30 }
-sub std_no_multilang_support ()       { 1 }
-sub std_default_lang ()               { 'en' }
-sub std_url_contains_lang ()          { 0 }
-sub std_template_dir_contains_lang () { 0 }
-sub std_handle_static ()              { 0 }
-sub std_app_namespace ()              { $app_namespace }
-sub std_in_filter_dir ()              { "$app_conf_dir/InFilter" }
-sub std_model_local_dir ()            { "$app_conf_dir/Local" }
-sub std_out_filter_dir ()             { "$app_conf_dir/OutFilter" }
-sub std_upload_dir ()                 { "$project_dir/var/upload" }
-sub std_captcha_db ()                 { "$project_dir/var/captcha-db" }
-sub std_captcha_font ()               { "giant" }
-sub std_captcha_secret ()             { "very secret" }
-sub std_cache_file ()                 { "$project_dir/var/cache/shared.cache" }
-sub std_cache_size ()                 { "8m" }
-sub std_cache_global_expire ()        { "1h" }
-sub std_cache_method_expire ()        { 60 }
-sub std_model_dir ()                  { "$project_dir/model" }
-sub std_www_static_dir ()             { "$project_dir/www-static" }
-sub std_www_static_captchas_dir ()    { "$project_dir/www-static/captchas" }
-sub std_db_user ()                    { "pef" }
-sub std_db_password ()                { "pef-pass" }
-sub std_db_name ()                    { "pef" }
-sub std_log_level_info ()             { 1 }
-sub std_log_level_error ()            { 1 }
-sub std_log_level_debug ()            { 0 }
-sub std_cookie_unset_negative_expire () { -3600 }
+sub std_no_nls                       { 0 }
+sub std_model_rpc_admin_port         { 5500 }
+sub std_model_rpc_site_port          { 4500 }
+sub std_model_rpc_admin_addr         { '172.16.0.1' }
+sub std_model_rpc_site_addr          { '172.16.0.1' }
+sub std_template_cache               { "$project_dir/var/tt_cache" }
+sub std_location_error               { "/appError?msgid=Internal\%20Error" }
+sub std_db_reconnect_trys            { 30 }
+sub std_no_multilang_support         { 1 }
+sub std_default_lang                 { 'en' }
+sub std_url_contains_lang            { 0 }
+sub std_template_dir_contains_lang   { 0 }
+sub std_handle_static                { 0 }
+sub std_app_namespace                { $app_namespace }
+sub std_in_filter_dir                { "$app_conf_dir/InFilter" }
+sub std_model_local_dir              { "$app_conf_dir/Local" }
+sub std_out_filter_dir               { "$app_conf_dir/OutFilter" }
+sub std_upload_dir                   { "$project_dir/var/upload" }
+sub std_captcha_db                   { "$project_dir/var/captcha-db" }
+sub std_captcha_font                 { "giant" }
+sub std_captcha_secret               { "very secret" }
+sub std_cache_file                   { "$project_dir/var/cache/shared.cache" }
+sub std_cache_size                   { "8m" }
+sub std_cache_global_expire          { "1h" }
+sub std_cache_method_expire          { 60 }
+sub std_model_dir                    { "$project_dir/model" }
+sub std_www_static_dir               { "$project_dir/www-static" }
+sub std_www_static_captchas_dir      { "$project_dir/www-static/captchas" }
+sub std_db_user                      { "pef" }
+sub std_db_password                  { "pef-pass" }
+sub std_db_name                      { "pef" }
+sub std_log_level_info               { 1 }
+sub std_log_level_error              { 1 }
+sub std_log_level_debug              { 0 }
+sub std_cookie_unset_negative_expire { -3600 }
 
 sub std_template_dir {
 	cfg_template_dir_contains_lang()
