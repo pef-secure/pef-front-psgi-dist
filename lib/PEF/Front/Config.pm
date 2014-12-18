@@ -19,8 +19,7 @@ sub normalize_path {
 	}
 }
 
-my @std_params = qw{
-  cfg_template_dir
+my @std_const_params = qw{
   cfg_upload_dir
   cfg_captcha_db
   cfg_captcha_font
@@ -43,7 +42,6 @@ my @std_params = qw{
   cfg_model_rpc_site_port
   cfg_model_rpc_admin_addr
   cfg_model_rpc_site_addr
-  cfg_model_rpc
   cfg_model_local_dir
   cfg_app_namespace
   cfg_default_lang
@@ -59,6 +57,13 @@ my @std_params = qw{
   cfg_log_level_debug
 };
 
+my @std_var_params = qw{
+  cfg_template_dir
+  cfg_model_rpc
+};
+
+our %config;
+
 sub import {
 	my ($modname) = grep { /AppFrontConfig\.pm$/ } keys %INC;
 	die "no config" if 0 && !$modname;
@@ -71,17 +76,31 @@ sub import {
 	my $mp = __PACKAGE__;
 	my $cp = caller;
 	no strict 'refs';
-	for my $method (@std_params) {
+	for my $method (@std_const_params, @std_var_params) {
 		(my $bmn = $method) =~ s/^cfg_//;
 		my $cref = "$modname"->can($method) || *{$mp . "::std_$bmn"};
 		*{$mp . "::$method"}      = $cref;
 		*{$cp . "::$method"}      = *{$mp . "::$method"};
 		*{$modname . "::$method"} = $cref if not "$modname"->can($method);
 	}
+
+	for my $method (@std_const_params) {
+		my $cref = __PACKAGE__->can($method);
+		(my $bmn = $method) =~ s/^cfg_//;
+		$config{$bmn} = $cref->() if not exists $config{$bmn};
+	}
+
 	my $exports = \@{$modname . "::EXPORT"};
 	for my $e (@$exports) {
 		if ((my $cref = "$modname"->can($e))) {
 			*{$cp . "::$e"} = $cref;
+		}
+	}
+
+	my $export_user_consts = \@{$modname . "::CONFIG_USER"};
+	for my $e (@$exports) {
+		if ((my $cref = "$modname"->can($e))) {
+			$config{$e} = $cref->() if not exists $config{$e};
 		}
 	}
 	if ("$modname"->can("project_dir")) {
@@ -92,11 +111,48 @@ sub import {
 		$project_dir = $lpath;
 	}
 }
-sub std_no_nls               { 0 }
-sub std_model_rpc_admin_port { 5500 }
-sub std_model_rpc_site_port  { 4500 }
-sub std_model_rpc_admin_addr { '172.16.0.1' }
-sub std_model_rpc_site_addr  { '172.16.0.1' }
+
+sub std_no_nls ()                     { 0 }
+sub std_model_rpc_admin_port()        { 5500 }
+sub std_model_rpc_site_port ()        { 4500 }
+sub std_model_rpc_admin_addr()        { '172.16.0.1' }
+sub std_model_rpc_site_addr ()        { '172.16.0.1' }
+sub std_template_cache ()             { "$project_dir/var/tt_cache" }
+sub std_location_error ()             { "/appError?msgid=Internal\%20Error" }
+sub std_db_reconnect_trys ()          { 30 }
+sub std_no_multilang_support ()       { 1 }
+sub std_default_lang ()               { 'en' }
+sub std_url_contains_lang ()          { 0 }
+sub std_template_dir_contains_lang () { 0 }
+sub std_handle_static ()              { 0 }
+sub std_app_namespace ()              { $app_namespace }
+sub std_in_filter_dir ()              { "$app_conf_dir/InFilter" }
+sub std_model_local_dir ()            { "$app_conf_dir/Local" }
+sub std_out_filter_dir ()             { "$app_conf_dir/OutFilter" }
+sub std_upload_dir ()                 { "$project_dir/var/upload" }
+sub std_captcha_db ()                 { "$project_dir/var/captcha-db" }
+sub std_captcha_font ()               { "giant" }
+sub std_captcha_secret ()             { "very secret" }
+sub std_cache_file ()                 { "$project_dir/var/cache/shared.cache" }
+sub std_cache_size ()                 { "8m" }
+sub std_cache_global_expire ()        { "1h" }
+sub std_cache_method_expire ()        { 60 }
+sub std_model_dir ()                  { "$project_dir/model" }
+sub std_www_static_dir ()             { "$project_dir/www-static" }
+sub std_www_static_captchas_dir ()    { "$project_dir/www-static/captchas" }
+sub std_db_user ()                    { "pef" }
+sub std_db_password ()                { "pef-pass" }
+sub std_db_name ()                    { "pef" }
+sub std_log_level_info ()             { 1 }
+sub std_log_level_error ()            { 1 }
+sub std_log_level_debug ()            { 0 }
+sub std_cookie_unset_negative_expire () { -3600 }
+
+sub std_template_dir {
+	cfg_template_dir_contains_lang()
+	  ? "$project_dir/templates/$_[1]"
+	  : "$project_dir/templates";
+}
 
 sub std_model_rpc {
 	if ($_[0] eq 'admin' || $_[0] eq 'rpc_admin') {
@@ -111,40 +167,5 @@ sub std_model_rpc {
 		);
 	}
 }
-sub std_template_cache               { "$project_dir/var/tt_cache" }
-sub std_location_error               { "/appError?msgid=Internal\%20Error" }
-sub std_db_reconnect_trys            { 30 }
-sub std_no_multilang_support         { 1 }
-sub std_default_lang                 { 'en' }
-sub std_url_contains_lang            { 0 }
-sub std_template_dir_contains_lang   { 0 }
-sub std_handle_static                { 0 }
-sub std_app_namespace                { $app_namespace }
-sub std_in_filter_dir                { "$app_conf_dir/InFilter" }
-sub std_model_local_dir              { "$app_conf_dir/Local" }
-sub std_out_filter_dir               { "$app_conf_dir/OutFilter" }
-sub std_upload_dir                   { "$project_dir/var/upload" }
-sub std_captcha_db                   { "$project_dir/var/captcha-db" }
-sub std_captcha_font                 { "giant" }
-sub std_captcha_secret               { "very secret" }
-sub std_cache_file                   { "$project_dir/var/cache/shared.cache" }
-sub std_cache_size                   { "8m" }
-sub std_cache_global_expire          { "1h" }
-sub std_cache_method_expire          { 60 }
-sub std_model_dir                    { "$project_dir/model" }
-sub std_www_static_dir               { "$project_dir/www-static" }
-sub std_www_static_captchas_dir      { "$project_dir/www-static/captchas" }
-sub std_db_user                      { "pef" }
-sub std_db_password                  { "pef-pass" }
-sub std_db_name                      { "pef" }
-sub std_cookie_unset_negative_expire { -3600 }
-sub std_log_level_info               { 1 }
-sub std_log_level_error              { 1 }
-sub std_log_level_debug              { 0 }
 
-sub std_template_dir {
-	cfg_template_dir_contains_lang()
-	  ? "$project_dir/templates/$_[1]"
-	  : "$project_dir/templates";
-}
 1;
