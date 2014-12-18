@@ -169,8 +169,12 @@ sub check_avail_lang {
 sub guess_lang {
 	my $request    = $_[0];
 	my $cookie_ref = $request->cookies;
-	my $lang = (exists ($cookie_ref->{'lang'}) ? $cookie_ref->{'lang'} : undef);
-	$lang = undef if $lang ne cfg_default_lang and not check_avail_lang $lang;
+	my $lang =
+	  (exists ($cookie_ref->{'lang'}) ? $cookie_ref->{'lang'} : undef);
+	$lang = undef
+	  if $lang
+	  and $lang ne cfg_default_lang
+	  and not check_avail_lang $lang;
 	if (cfg_no_multilang_support and not $lang) {
 		$lang = cfg_default_lang;
 	} elsif (not $lang) {
