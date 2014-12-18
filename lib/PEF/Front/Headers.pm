@@ -7,6 +7,7 @@ use Encode;
 use utf8;
 use URI::Escape;
 use POSIX 'strftime';
+use List::Util;
 
 sub new {
 	my $self = bless [], $_[0];
@@ -57,21 +58,13 @@ sub remove_header {
 
 sub get_header {
 	my ($self, $key) = @_;
-	my $value;
-	for (my $i = 0 ; $i < @$self ; $i += 2) {
-		if ($self->[$i] eq $key) {
-			if (defined $value) {
-				if (ref ($value)) {
-					push @{$value}, $self->[$i + 1];
-				} else {
-					$value = [$value, $self->[$i + 1]];
-				}
-			} else {
-				$value = $self->[$i + 1];
-			}
-		}
+	no warnings 'once';
+	my @h = pairgrep { $a eq $key } @$self;
+	if (@h == 2) {
+		$h[1];
+	} else {
+		[pairmap { $b } @h];
 	}
-	return $value;
 }
 
 sub get_all_headers {

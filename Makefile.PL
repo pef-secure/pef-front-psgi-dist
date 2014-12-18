@@ -23,6 +23,7 @@ WriteMakefile(
 		'IO::Socket'            => 0,
 		'JSON'                  => 0,
 		'Locale::PO'            => 0,
+		'List::Util'            => 0,
 		'MLDBM'                 => 0,
 		'MLDBM::Sync'           => "0.30",
 		'POSIX'                 => 0,
