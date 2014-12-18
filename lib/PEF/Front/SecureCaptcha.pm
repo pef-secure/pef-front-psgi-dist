@@ -58,7 +58,7 @@ sub generate_code {
 		ptsize   => $pts,
 		angle    => "0E0",
 		scramble => 1,
-		lines    => int ($size * 1.5 + 0.5),
+		lines    => int ($size),
 		width    => $self->{width} * $size,
 		height   => $self->{height},
 		font     => $self->{font}
