@@ -7,7 +7,7 @@ use Encode;
 use utf8;
 use URI::Escape;
 use POSIX 'strftime';
-use List::Util;
+use List::Util qw(pairgrep pairvalues);
 
 sub new {
 	my $self = bless [], $_[0];
@@ -63,7 +63,7 @@ sub get_header {
 	if (@h == 2) {
 		$h[1];
 	} else {
-		[pairmap { $b } @h];
+		[pairvalues @h];
 	}
 }
 
