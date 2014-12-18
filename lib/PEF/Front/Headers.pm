@@ -62,6 +62,8 @@ sub get_header {
 	my @h = pairgrep { $a eq $key } @$self;
 	if (@h == 2) {
 		$h[1];
+	} elsif (!@h) {
+		return;
 	} else {
 		[pairvalues @h];
 	}
