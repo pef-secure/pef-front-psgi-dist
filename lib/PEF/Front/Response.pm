@@ -132,6 +132,8 @@ sub safe_encode_utf8 {
 	$_[0];
 }
 
+use Data::Dumper;
+
 sub make_headers {
 	my ($self) = @_;
 	my $headers = $self->{headers}->get_all_headers;
@@ -149,6 +151,7 @@ sub make_headers {
 			push @$other_headers, $headers->[$i], $headers->[$i + 1];
 		}
 	}
+	warn Dumper $headers, $other_headers, $content_headers;
 	my $cookies = $self->{cookies}->get_all_headers;
 	for (my $i = 0 ; $i < @$cookies ; $i += 2) {
 		my $name  = safe_encode_utf8($cookies->[$i]);
