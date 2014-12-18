@@ -240,7 +240,9 @@ sub to_app {
 		my $request       = PEF::Front::Request->new($_[0]);
 		my $http_response = rewrite_route($request);
 		return $http_response->response() if $http_response;
-		if (cfg_url_contains_lang && substr ($request->path, 3, 1) ne '/') {
+		if (cfg_url_contains_lang
+			&& ($request->path < 4 || substr ($request->path, 3, 1) ne '/'))
+		{
 			my $lang = PEF::Front::NLS::guess_lang($request);
 			if ($request->method eq 'GET') {
 				$http_response = PEF::Front::Response->new(base => $request->base);
@@ -252,13 +254,15 @@ sub to_app {
 		}
 		my $lang_offset = (cfg_url_contains_lang) ? 3 : 0;
 		my $handler;
-		if (substr ($request->path, $lang_offset, 4) eq '/app') {
-			$handler = "PEF::Front::RenderTT";
-		} elsif (substr ($request->path, $lang_offset, 5) eq '/ajax'
-			|| substr ($request->path, $lang_offset, 7) eq '/submit'
-			|| substr ($request->path, $lang_offset, 4) eq '/get')
-		{
-			$handler = "PEF::Front::Ajax";
+		if ($request->path > $lang_offset + 4) {
+			if (substr ($request->path, $lang_offset, 4) eq '/app') {
+				$handler = "PEF::Front::RenderTT";
+			} elsif (substr ($request->path, $lang_offset, 5) eq '/ajax'
+				|| substr ($request->path, $lang_offset, 7) eq '/submit'
+				|| substr ($request->path, $lang_offset, 4) eq '/get')
+			{
+				$handler = "PEF::Front::Ajax";
+			}
 		}
 		if ($handler) {
 			my $defaults = prepare_defaults($request);
