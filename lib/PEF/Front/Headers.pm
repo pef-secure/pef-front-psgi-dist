@@ -45,17 +45,22 @@ sub get_header {
 	$self->{$key};
 }
 
+use Data::Dumper;
+
 sub get_all_headers {
 	my $self = $_[0];
-	[
+	my $ret = [
 		map {
 			my $key = $_;
-			not ref ($self->{$key})
-			  or 'ARRAY' ne ref ($self->{$key})
-			  ? ($key => $self->{$key})
-			  : (map { $key => $_ } @{$self->{$key}})
+			(   not ref ($self->{$key})
+				  or 'ARRAY' ne ref ($self->{$key})
+				? ($key => $self->{$key})
+				: (map { $key => $_ } @{$self->{$key}})
+			  )
 		} keys %$self
 	];
+	warn Dumper $self, $ret;
+	$ret;
 }
 
 package PEF::Front::HTTPHeaders;
