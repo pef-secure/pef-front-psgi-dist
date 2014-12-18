@@ -96,7 +96,7 @@ sub import {
 			*{$cp . "::$e"} = $cref;
 		}
 	}
-
+	no warnings 'once';
 	my $export_user_consts = \@{$modname . "::CONFIG_USER"};
 	for my $e (@$exports) {
 		if ((my $cref = "$modname"->can($e))) {
@@ -111,6 +111,8 @@ sub import {
 		$project_dir = $lpath;
 	}
 }
+
+BEGIN { import() }
 
 sub std_no_nls                       { 0 }
 sub std_model_rpc_admin_port         { 5500 }
