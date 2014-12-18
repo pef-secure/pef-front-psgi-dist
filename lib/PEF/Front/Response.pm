@@ -132,24 +132,11 @@ sub safe_encode_utf8 {
 	$_[0];
 }
 
-use Data::Dumper;
-
 sub make_headers {
 	my ($self) = @_;
 	my $headers = $self->{headers}->get_all_headers;
 	for (@$headers) {
 		$_ = encode_utf8($_) if utf8::is_utf8($_);
-	}
-	my $content_headers = [];
-	my $other_headers   = [];
-	for (my $i = 0 ; $i < @$headers ; $i += 2) {
-		next if not defined $headers->[$i] or $headers->[$i] eq '';
-		$headers->[$i + 1] = '' if not defined $headers->[$i + 1];
-		if ($headers->[$i] =~ /^Content-/) {
-			push @$content_headers, $headers->[$i], $headers->[$i + 1];
-		} else {
-			push @$other_headers, $headers->[$i], $headers->[$i + 1];
-		}
 	}
 	my $cookies = $self->{cookies}->get_all_headers;
 	for (my $i = 0 ; $i < @$cookies ; $i += 2) {
@@ -167,11 +154,9 @@ sub make_headers {
 		push @cookie, "max-age=" . $value->{"max-age"}        if $value->{"max-age"};
 		push @cookie, "secure"                                if $value->{secure};
 		push @cookie, "HttpOnly"                              if $value->{httponly};
-		push @$other_headers, ('Set-Cookie' => join "; ", @cookie);
+		push @$headers, ('Set-Cookie' => join "; ", @cookie);
 	}
-	push @$other_headers, @$content_headers;
-	warn Dumper $headers, $other_headers;
-	return [$self->status, $other_headers];
+	return [$self->status, $headers];
 }
 
 sub response {
