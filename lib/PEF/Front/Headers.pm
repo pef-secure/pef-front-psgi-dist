@@ -7,10 +7,9 @@ use Encode;
 use utf8;
 use URI::Escape;
 use POSIX 'strftime';
-use List::Util qw(pairgrep pairvalues);
 
 sub new {
-	my $self = bless [], $_[0];
+	my $self = bless {}, $_[0];
 	for (my $i = 1 ; $i < @_ ; $i += 2) {
 		$self->add_header($_[$i], $_[$i + 1]);
 	}
@@ -19,59 +18,44 @@ sub new {
 
 sub add_header {
 	my ($self, $key, $value) = @_;
-	push @$self, ($key, $value);
+	if (exists $self->{$key}) {
+		if ('ARRAY' eq ref $self->{$key}) {
+			push @{$self->{$key}}, $value;
+		} else {
+			$self->{$key} = [$self->{$key}, $value];
+		}
+	} else {
+		$self->{$key} = $value;
+	}
 }
 
 sub set_header {
 	my ($self, $key, $value) = @_;
-	my $set = 0;
-	for (my $i = 0 ; $i < @$self ; $i += 2) {
-		if ($self->[$i] eq $key) {
-			unless ($set) {
-				$self->[$i + 1] = $value;
-				$set = 1;
-			} else {
-				splice @$self, $i, 2;
-				$i -= 2;
-			}
-		}
-	}
-	$self->add_header($key, $value) unless $set;
+	$self->{$key} = $value;
 }
 
 sub remove_header {
-	my ($self, $key, $value) = @_;
-	for (my $i = 0 ; $i < @$self ; $i += 2) {
-		if ($self->[$i] eq $key) {
-			if (defined $value) {
-				if ($self->[$i + 1] eq $value) {
-					splice @$self, $i, 2;
-					$i -= 2;
-				}
-			} else {
-				splice @$self, $i, 2;
-				$i -= 2;
-			}
-		}
-	}
+	my ($self, $key) = @_;
+	delete $self->{$key};
 }
 
 sub get_header {
 	my ($self, $key) = @_;
-	no warnings 'once';
-	my @h = pairgrep { $a eq $key } @$self;
-	if (@h == 2) {
-		$h[1];
-	} elsif (!@h) {
-		return;
-	} else {
-		[pairvalues @h];
-	}
+	return if not exists $self->{$key};
+	$self->{$key};
 }
 
 sub get_all_headers {
-	my ($self) = @_;
-	[@$self];
+	my $self = $_;
+	[
+		map {
+			my $key = $_;
+			not ref ($self->{$key})
+			  or 'ARRAY' ne ref ($self->{$key})
+			  ? ($key => $self->{$key})
+			  : (map { $key => $_ } @{$self->{$key}})
+		} keys %$self
+	];
 }
 
 package PEF::Front::HTTPHeaders;
@@ -98,8 +82,8 @@ sub set_header {
 }
 
 sub remove_header {
-	my ($self, $key, $value) = @_;
-	$self->SUPER::remove_header(_canonical($key), $value);
+	my ($self, $key) = @_;
+	$self->SUPER::remove_header(_canonical($key));
 }
 
 sub get_header {

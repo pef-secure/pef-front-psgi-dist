@@ -138,10 +138,22 @@ sub make_headers {
 	for (@$headers) {
 		$_ = encode_utf8($_) if utf8::is_utf8($_);
 	}
+	my $content_headers = [];
+	my $other_headers   = [];
+	for (my $i = 0 ; $i < @$headers ; $i += 2) {
+		next if not defined $headers->[$i] or $headers->[$i] eq '';
+		$headers->[$i + 1] = '' if not defined $headers->[$i + 1];
+		if ($headers->[$i] =~ /^Content-/) {
+			push @$content_headers, $headers->[$i], $headers->[$i + 1];
+		} else {
+			push @$other_headers, $headers->[$i], $headers->[$i + 1];
+		}
+	}
 	my $cookies = $self->{cookies}->get_all_headers;
 	for (my $i = 0 ; $i < @$cookies ; $i += 2) {
 		my $name  = safe_encode_utf8($cookies->[$i]);
 		my $value = $cookies->[$i + 1];
+		$value = '' if not defined $value;
 		$value = {value => $value} unless ref ($value) eq 'HASH';
 		no utf8;
 		my @cookie =
@@ -153,9 +165,10 @@ sub make_headers {
 		push @cookie, "max-age=" . $value->{"max-age"}        if $value->{"max-age"};
 		push @cookie, "secure"                                if $value->{secure};
 		push @cookie, "HttpOnly"                              if $value->{httponly};
-		push @$headers, ('Set-Cookie' => join "; ", @cookie);
+		push @$other_headers, ('Set-Cookie' => join "; ", @cookie);
 	}
-	return [$self->status, $headers];
+	push @$other_headers, @$content_headers;
+	return [$self->status, $other_headers];
 }
 
 sub response {
