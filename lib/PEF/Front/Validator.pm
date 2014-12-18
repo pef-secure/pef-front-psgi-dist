@@ -16,14 +16,44 @@ our @EXPORT = qw{
   get_method_attrs
 };
 my %cache;
-#{
-#	ajax => {
-#		$method => {
-#			code => sub {},
-#			modified => $mtime
-#		}
-#	}
-#}
+
+sub collect_base_rules {
+	my ($method, $mr, $pr) = @_;
+	my %seen;
+	my %ret;
+	substr ($mr, 0, 1, '') if substr ($mr, 0, 1) eq '$';
+	my $entry = $mr;
+	while (!exists $seen{$entry}) {
+		$seen{$entry} = undef;
+		croak {
+			result      => 'INTERR',
+			answer      => 'Internal server error',
+			answer_args => [],
+			message     => "Validation $method error: unknow base rule '$mr' for '$pr'",
+		  }
+		  unless exists $cache{'-base-'}{rules}{params}{$entry};
+		my $rules = $cache{'-base-'}{rules}{params}{$entry};
+		last if not defined $rules or (not ref $rules and $rules eq '');
+		if (not ref $rules) {
+			if (substr ($rules, 0, 1) eq '$') {
+				$entry = substr ($rules, 1);
+			} else {
+				%ret = ({regex => $rules}, %ret);
+			}
+		} else {
+			%ret = (%$rules, %ret);
+			if (exists $ret{base}) {
+				if (defined $ret{base} and $ret{base} ne '') {
+					$entry = $ret{base};
+					substr ($entry, 0, 1, '') if substr ($entry, 0, 1) eq '$';
+				}
+				delete $ret{base};
+			}
+		}
+	}
+	\%ret;
+}
+
 sub build_validator {
 	my $rules         = $_[0];
 	my $method_rules  = $rules->{params} || {};
@@ -36,29 +66,17 @@ sub build_validator {
 	my @add_use;
 	for my $pr (keys %$method_rules) {
 		my $mr = $method_rules->{$pr};
+		$mr = '' if not defined $mr;
 		$known_params{$pr} = undef;
-		if (!ref ($mr) && substr ($mr, 0, 1) eq '$') {
-			croak {
-				result      => 'INTERR',
-				answer      => 'Internal server error',
-				answer_args => [],
-				message => "Validation $rules->{method} error: unknow base rule '$mr' for $pr",
-			  }
-			  if not exists $cache{'-base-'}{rules}{params}{substr ($mr, 1)};
-			$mr = $cache{'-base-'}{rules}{params}{substr ($mr, 1)};
+		if (!ref ($mr) and length $mr > 0 and substr ($mr, 0, 1) eq '$') {
+			$mr = collect_base_rules($rules->{method}, $mr, $pr);
 		}
-		if (ref ($mr) && exists $mr->{base}) {
-			substr ($mr->{base}, 0, 1, '') if substr ($mr->{base}, 0, 1) eq '$';
-			croak {
-				result      => 'INTERR',
-				answer      => 'Internal server error',
-				answer_args => [],
-				message =>
-				  "Validation $rules->{method} error: unknow base rule '$mr->{base}' for $pr",
-			  }
-			  if not exists $cache{'-base-'}{rules}{params}{$mr->{base}};
-			my $bmr = $cache{'-base-'}{rules}{params}{$mr->{base}};
-			$bmr = {regex => $bmr} unless ref $bmr;
+		if (    ref $mr
+			and exists $mr->{base}
+			and defined $mr->{base}
+			and $mr->{base} ne '')
+		{
+			my $bmr = collect_base_rules($rules->{method}, $mr, $pr);
 			$mr = {%$bmr, %$mr};
 		}
 		if (!ref ($mr)) {
