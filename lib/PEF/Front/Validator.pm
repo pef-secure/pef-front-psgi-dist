@@ -38,7 +38,7 @@ sub collect_base_rules {
 			if (substr ($rules, 0, 1) eq '$') {
 				$entry = substr ($rules, 1);
 			} else {
-				%ret = ({regex => $rules}, %ret);
+				%ret = (regex => $rules, %ret);
 			}
 		} else {
 			%ret = (%$rules, %ret);
