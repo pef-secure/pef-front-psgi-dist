@@ -5,8 +5,6 @@ use PEF::Front::Config;
 use Time::Duration::Parse;
 use Encode;
 use utf8;
-use URI::Escape;
-use POSIX 'strftime';
 
 sub new {
 	my $self = bless {}, $_[0];
