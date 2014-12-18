@@ -46,7 +46,7 @@ sub get_header {
 }
 
 sub get_all_headers {
-	my $self = $_;
+	my $self = $_[0];
 	[
 		map {
 			my $key = $_;
