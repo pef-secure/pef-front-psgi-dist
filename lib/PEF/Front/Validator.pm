@@ -29,7 +29,7 @@ sub collect_base_rules {
 			result      => 'INTERR',
 			answer      => 'Internal server error',
 			answer_args => [],
-			message     => "Validation $method error: unknow base rule '$mr' for '$pr'",
+			message     => "Validation $method error: unknow base rule '$entry' for '$pr'",
 		  }
 		  unless exists $cache{'-base-'}{rules}{params}{$entry};
 		my $rules = $cache{'-base-'}{rules}{params}{$entry};
@@ -76,7 +76,7 @@ sub build_validator {
 			and defined $mr->{base}
 			and $mr->{base} ne '')
 		{
-			my $bmr = collect_base_rules($rules->{method}, $mr, $pr);
+			my $bmr = collect_base_rules($rules->{method}, $mr->{base}, $pr);
 			$mr = {%$bmr, %$mr};
 		}
 		if (!ref ($mr)) {
