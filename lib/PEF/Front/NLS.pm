@@ -9,6 +9,7 @@ use base 'Exporter';
 
 our @EXPORT = qw{
   msg_get
+  msg_get_n
 };
 
 sub msg_peek {
