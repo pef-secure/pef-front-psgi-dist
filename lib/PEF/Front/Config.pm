@@ -32,6 +32,7 @@ my @std_const_params = qw{
   cfg_cookie_unset_negative_expire
   cfg_www_static_dir
   cfg_www_static_captchas_dir
+  cfg_www_static_captchas_path
   cfg_in_filter_dir
   cfg_out_filter_dir
   cfg_db_user
@@ -62,6 +63,8 @@ my @std_var_params = qw{
   cfg_model_rpc
 };
 
+my %config_export;
+
 sub import {
 	my ($modname) = grep { /AppFrontConfig\.pm$/ } keys %INC;
 	die "no config" if 0 && !$modname;
@@ -80,11 +83,13 @@ sub import {
 		*{$mp . "::$method"}      = $cref;
 		*{$cp . "::$method"}      = *{$mp . "::$method"};
 		*{$modname . "::$method"} = $cref if not "$modname"->can($method);
+		$config_export{$method} = $cref;
 	}
 	my $exports = \@{$modname . "::EXPORT"};
 	for my $e (@$exports) {
 		if ((my $cref = "$modname"->can($e))) {
 			*{$cp . "::$e"} = $cref;
+			$config_export{$e} = $cref;
 		}
 	}
 	if ("$modname"->can("project_dir")) {
@@ -132,6 +137,18 @@ sub std_log_level_error              { 1 }
 sub std_log_level_debug              { 0 }
 sub std_cookie_unset_negative_expire { -3600 }
 
+sub std_www_static_captchas_path {
+	if (substr (cfg_www_static_captchas_dir(), 0, length (cfg_www_static_dir())) eq
+		cfg_www_static_dir())
+	{
+		# removes cfg_www_static_dir() from cfg_www_static_captchas_dir() and adds '/'
+		substr (cfg_www_static_captchas_dir(), length (cfg_www_static_dir())) . '/';
+	} else {    
+		#must be overriden by user
+		'/captchas/';
+	}
+}
+
 sub std_template_dir {
 	cfg_template_dir_contains_lang()
 	  ? "$project_dir/templates/$_[1]"
@@ -151,5 +168,50 @@ sub std_model_rpc {
 		);
 	}
 }
+
+sub TIEHASH {
+	my $classname = $_[0];
+	my %params    = %config_export;
+	return bless \%params, $classname;
+}
+
+sub FETCH {
+	my ($self, $key) = @_;
+	my $cfg_key = "cfg_" . $key;
+	if (exists $self->{$cfg_key}) {
+		$self->{$cfg_key}->();
+	} elsif (exists $self->{$key}) {
+		$self->{$key}->();
+	} else {
+		undef;
+	}
+}
+
+sub EXISTS {
+	my ($self, $key) = @_;
+	exists $self->{$key};
+}
+
+sub FIRSTKEY {
+	my ($self) = @_;
+	my $a = keys %{$self};
+	each %{$self};
+}
+
+sub NEXTKEY {
+	my ($self, $key) = @_;
+	each %{$self};
+}
+
+sub SCALAR {
+	my ($self) = @_;
+	scalar %{$self};
+}
+
+sub STORE   { }
+sub DELETE  { }
+sub CLEAR   { }
+sub DESTROY { }
+sub UNTIE   { }
 
 1;
