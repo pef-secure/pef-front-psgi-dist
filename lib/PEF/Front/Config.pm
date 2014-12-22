@@ -77,13 +77,16 @@ sub import {
 	my $mp = __PACKAGE__;
 	my $cp = caller;
 	no strict 'refs';
-	for my $method (@std_const_params, @std_var_params) {
-		(my $bmn = $method) =~ s/^cfg_//;
-		my $cref = "$modname"->can($method) || *{$mp . "::std_$bmn"};
-		*{$mp . "::$method"}      = $cref;
-		*{$cp . "::$method"}      = *{$mp . "::$method"};
-		*{$modname . "::$method"} = $cref if not "$modname"->can($method);
-		$config_export{$method} = $cref;
+	my @pa = (\@std_const_params, \@std_var_params);
+	for (my $i = 0 ; $i < @pa ; ++$i) {
+		for my $method (@{$pa[$i]}) {
+			(my $bmn = $method) =~ s/^cfg_//;
+			my $cref = "$modname"->can($method) || *{$mp . "::std_$bmn"};
+			*{$mp . "::$method"}      = $cref;
+			*{$cp . "::$method"}      = *{$mp . "::$method"};
+			*{$modname . "::$method"} = $cref if not "$modname"->can($method);
+			$config_export{$method} = $cref if $i == 0;
+		}
 	}
 	my $exports = \@{$modname . "::EXPORT"};
 	for my $e (@$exports) {
