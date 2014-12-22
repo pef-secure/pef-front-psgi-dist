@@ -62,8 +62,6 @@ my @std_var_params = qw{
   cfg_model_rpc
 };
 
-our %config;
-
 sub import {
 	my ($modname) = grep { /AppFrontConfig\.pm$/ } keys %INC;
 	die "no config" if 0 && !$modname;
@@ -83,24 +81,10 @@ sub import {
 		*{$cp . "::$method"}      = *{$mp . "::$method"};
 		*{$modname . "::$method"} = $cref if not "$modname"->can($method);
 	}
-
-	for my $method (@std_const_params) {
-		my $cref = __PACKAGE__->can($method);
-		(my $bmn = $method) =~ s/^cfg_//;
-		$config{$bmn} = $cref->() if not exists $config{$bmn};
-	}
-
 	my $exports = \@{$modname . "::EXPORT"};
 	for my $e (@$exports) {
 		if ((my $cref = "$modname"->can($e))) {
 			*{$cp . "::$e"} = $cref;
-		}
-	}
-	no warnings 'once';
-	my $export_user_consts = \@{$modname . "::CONFIG_USER"};
-	for my $e (@$exports) {
-		if ((my $cref = "$modname"->can($e))) {
-			$config{$e} = $cref->() if not exists $config{$e};
 		}
 	}
 	if ("$modname"->can("project_dir")) {
@@ -111,8 +95,6 @@ sub import {
 		$project_dir = $lpath;
 	}
 }
-
-BEGIN { import() }
 
 sub std_no_nls                       { 0 }
 sub std_model_rpc_admin_port         { 5500 }
