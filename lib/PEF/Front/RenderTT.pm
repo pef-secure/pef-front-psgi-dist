@@ -22,7 +22,8 @@ sub handler {
 	my $lang          = $defaults->{lang};
 	$http_response->set_cookie(lang => {value => $lang, path => "/"});
 	my $template = delete $defaults->{method};
-	tie my %config, 'PEF::Front::Config';
+	my %config;
+	tie %config, 'PEF::Front::Config';
 	$defaults->{config} = \%config;
 	$template =~ tr/ /_/;
 	my $template_file = "$template.html";
