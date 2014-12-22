@@ -3,6 +3,7 @@ use DBIx::Connector;
 use Locale::PO;
 use JSON;
 use Encode;
+use SQL::Abstract;
 
 my $dbuser = ((getpwuid $>)[0]);
 my $dbname = $dbuser;
@@ -39,15 +40,17 @@ USAGE
 
 sub db_connect {
 	$dbname = "dbi:Pg:dbname=$dbname" if $dbname !~ /^dbi:/;
-	$conn = DBIx::Connector->new(
-		$dbname, $dbuser, $dbpass,
-		{   AutoCommit          => 1,
-			PrintError          => 0,
-			AutoInactiveDestroy => 1,
-			RaiseError          => 1,
-			pg_enable_utf8      => 1
-		}
-	) or die "SQL_connect: " . DBI->errstr();
+	my ($driver) = $dbname =~ /^dbi:([^:]+):/;
+	my $attrs = {
+		AutoCommit          => 1,
+		PrintError          => 0,
+		AutoInactiveDestroy => 1,
+		RaiseError          => 1,
+	};
+	$attrs->{pg_enable_utf8}    = 1 if $driver eq 'Pg';
+	$attrs->{mysql_enable_utf8} = 1 if $driver eq 'mysql';
+	$conn = DBIx::Connector->new($dbname, $dbuser, $dbpass, $attrs)
+	  or die "SQL_connect: " . DBI->errstr();
 	$conn->mode('fixup');
 	$conn;
 }
@@ -76,30 +79,62 @@ my $nls_lang = $conn->run(
 	}
 ) or die "unknown nls_lang";
 
-my $inserted = 0;
-my $updated  = 0;
+my $inserted  = 0;
+my $updated   = 0;
+my $abs_where = SQL::Abstract->new;
 
 for my $msg (@$aref) {
 	next if Locale::PO->dequote($msg->msgid) eq '';
+	my $msgctxt = $msg->msgctxt;
+	$msgctxt = Locale::PO->dequote(decode_utf8 $msgctxt) if defined $msgctxt;
 	my $nls_msgid = $conn->run(
 		sub {
-			$_->selectrow_hashref('select * from nls_msgid where msgid = ?',
-				undef, Locale::PO->dequote(decode_utf8 $msg->msgid));
+			my $cond = {
+				msgid   => Locale::PO->dequote(decode_utf8 $msg->msgid),
+				context => $msgctxt
+			};
+			my ($where, @bind) = $abs_where->where($cond);
+			$_->selectrow_hashref('select * from nls_msgid ' . $where, undef, @bind);
 		}
 	);
-	my $msgctxt = decode_utf8 $msg->msgctxt;
-	$msgctxt = Locale::PO->dequote($msgctxt) if defined $msgctxt;
+	my $plural =
+	  $msg->msgid_plural
+	  ? Locale::PO->dequote(decode_utf8 $msg->msgid_plural)
+	  : undef;
 	if (!$nls_msgid) {
 		$nls_msgid = $conn->run(
 			sub {
+				if ($plural) {
+					my $cond = {msgid => $plural, context => $msgctxt};
+					my ($where, @bind) = $abs_where->where($cond);
+					$_->do('delete from nls_msgid ' . $where, undef, @bind);
+				}
 				$_->do(
-					'insert into nls_msgid (msgid, context) values(?, ?)', undef,
-					Locale::PO->dequote(decode_utf8 $msg->msgid),          $msgctxt
+					'insert into nls_msgid (msgid, msgid_plural, context) values(?, ?, ?)',
+					undef, Locale::PO->dequote(decode_utf8 $msg->msgid),
+					$plural, $msgctxt
 				);
 				$_->selectrow_hashref('select * from nls_msgid where msgid = ?',
 					undef, Locale::PO->dequote(decode_utf8 $msg->msgid));
 			}
 		);
+	} else {
+		if (   ($plural || $nls_msgid->{msgid_plural})
+			&& ((!$msgctxt && !$nls_msgid->{context}) || $msgctxt eq $nls_msgid->{context})
+			&& $nls_msgid->{msgid_plural} ne $plural)
+		{
+			my $cond = {
+				msgid   => $nls_msgid->{msgid},
+				context => $msgctxt
+			};
+			my ($where, @bind) = $abs_where->where($cond);
+			$conn->run(
+				sub {
+					$_->do('update nls_msgid set msgid_plural = ? ' . $where, undef, $plural,
+						@bind);
+				}
+			);
+		}
 	}
 	my $nls_message = $conn->run(
 		sub {
@@ -121,6 +156,9 @@ for my $msg (@$aref) {
 		for my $km (keys %msgh) {
 			$msgstr->[$km] = Locale::PO->dequote(decode_utf8 $msgh{$km});
 		}
+	} else {
+		$msgstr = [$nls_msgid->{msgid}];
+		push @$msgstr, $plural if $plural;
 	}
 	if (@$msgstr > 1 || $msgstr->[0] ne '') {
 		if ($nls_message) {
@@ -129,8 +167,7 @@ for my $msg (@$aref) {
 					sub {
 						$_->do(
 							'update nls_message set message_json = ? where id_nls_msgid = ? and short = ?',
-							undef, to_json($msgstr), $nls_msgid->{id_nls_msgid},
-							$nls_lang->{short}
+							undef, to_json($msgstr), $nls_msgid->{id_nls_msgid}, $nls_lang->{short}
 						);
 					}
 				);

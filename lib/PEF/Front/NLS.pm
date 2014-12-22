@@ -26,9 +26,9 @@ sub msg_peek {
 					q{
 						select message_json, id_nls_msgid
 						from nls_message join nls_msgid using (id_nls_msgid)
-						where msgid = ? and short = ?
+						where (msgid = ? or msgid_plural = ?) and short = ?
 					},
-					undef, $msgid, $lang
+					undef, $msgid, $msgid, $lang
 				);
 				if (not defined $message_json) {
 					$found = 0;
@@ -36,9 +36,9 @@ sub msg_peek {
 						q{
 							select id_nls_msgid
 						   	from nls_msgid
-						   	where msgid = ?
+						   	where msgid = ? or msgid_plural = ?
 						},
-						undef, $msgid
+						undef, $msgid, $msgid
 					);
 				}
 			}

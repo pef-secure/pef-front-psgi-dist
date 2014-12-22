@@ -15,8 +15,10 @@ create table nls_geo (
 create table nls_msgid (
     id_nls_msgid     serial       primary key,
     msgid            text         not null,
+    msgid_plural     text         not null,
     context          text,
-    unique(msgid, context)
+    unique(msgid, context),
+    unique(msgid_plural, context),
 );
 
 create table nls_message (
