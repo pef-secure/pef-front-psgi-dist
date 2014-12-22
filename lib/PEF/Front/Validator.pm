@@ -170,6 +170,11 @@ sub build_validator {
 						$c              = quote_var($c);
 						$default        = "$def {cookies}->{$c}";
 						$check_defaults = "exists($def {cookies}->{$c})";
+					} elsif ($default =~ /^config\.(.*)/) {
+						my $c = $1;
+						$c =~ s/\s*$//;
+						$c              = quote_var($c);
+						$default        = "PEF::Front::Config::cfg($c)";
 					} else {
 						$default =~ s/\s*$//;
 						$default = quote_var($default);

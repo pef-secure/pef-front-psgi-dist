@@ -172,48 +172,17 @@ sub std_model_rpc {
 	}
 }
 
-sub TIEHASH {
-	my $classname = $_[0];
-	bless {%config_export}, $classname;
-}
-
-sub FETCH {
-	my ($self, $key) = @_;
+sub cfg {
+	my $key     = $_[0];
 	my $cfg_key = "cfg_" . $key;
-	if (exists $self->{$cfg_key}) {
-		$self->{$cfg_key}->();
-	} elsif (exists $self->{$key}) {
-		$self->{$key}->();
+	if (exists $config_export{$cfg_key}) {
+		$config_export{$cfg_key}->();
+	} elsif (exists $config_export{$key}) {
+		$config_export{$key}->();
 	} else {
+		warn "Unknown config key: $key";
 		undef;
 	}
 }
-
-sub EXISTS {
-	my ($self, $key) = @_;
-	exists $self->{$key};
-}
-
-sub FIRSTKEY {
-	my ($self) = @_;
-	my $a = keys %{$self};
-	each %{$self};
-}
-
-sub NEXTKEY {
-	my ($self, $key) = @_;
-	each %{$self};
-}
-
-sub SCALAR {
-	my ($self) = @_;
-	scalar %{$self};
-}
-
-sub STORE   { }
-sub DELETE  { }
-sub CLEAR   { }
-sub DESTROY { }
-sub UNTIE   { }
 
 1;

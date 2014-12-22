@@ -22,9 +22,6 @@ sub handler {
 	my $lang          = $defaults->{lang};
 	$http_response->set_cookie(lang => {value => $lang, path => "/"});
 	my $template = delete $defaults->{method};
-	my %config;
-	tie %config, 'PEF::Front::Config';
-	$defaults->{config} = \%config;
 	$template =~ tr/ /_/;
 	my $template_file = "$template.html";
 	if (!-f cfg_template_dir($request->hostname, $lang) . "/" . $template_file) {
@@ -119,8 +116,8 @@ sub handler {
 	$tt->define_vmethod(
 		'text',
 		config => sub {
-			my ($cfg_key) = @_;
-			$config{$cfg_key}
+			my ($key) = @_;
+			PEF::Front::Config::cfg($key)
 		}
 	);
 	$tt->define_vmethod(
