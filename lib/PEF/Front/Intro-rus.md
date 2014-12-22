@@ -335,6 +335,7 @@ cheaper-step = 1
 Помимо методов, которые реализованы в Template::Alloy, доступны так же 
 следующие методы:
 
+* `config("parameter")` -- получение значение параметра конфигурации;
 * `"method".model(param => value)` -- вызов метода модели;
 * `msg("msgid")` -- преобразование идентификатора сообщения в показываемое 
 сообщение, возможно с учётом языка;
@@ -454,7 +455,8 @@ allowed_source: [submit, ajax, template]
 * `defaults.param` -- параметр из хеша defauts. Возможные параметры: `ip`, 
 `lang`, `hostname`, `path_info`;
 * `headers.header` -- заголовок из запроса;
-* `cookies.cookie` -- кука из запроса.
+* `cookies.cookie` -- кука из запроса;
+* `config.paramter` -- значение параметра конфигурации.
 
 
 #### Лишние параметры

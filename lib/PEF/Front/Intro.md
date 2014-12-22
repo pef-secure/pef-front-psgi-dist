@@ -264,6 +264,7 @@ Templates are located in `cfg_template_dir`, they are called like $template.html
 
 Besids method implemented by Template::Alloy, there are some additional methods:
 
+* `config("parameter")` -- returns config's parameter value;
 * `"method".model(param => value)` -- model method call
 * `msg("msgid")` -- NLS message transformatin
 * `uri_unescape("hello%20world")` -- URI un-escape
@@ -360,6 +361,7 @@ Special prefixes `defaults`, `headers`, `cookie` can be used to retrieve some da
 * `defaults.param` -- value of some key from hash `defaults`. Possible values: `ip`, `lang`, `hostname`, `path_info`
 * `headers.header` -- value of request's header
 * `cookies.cookie` -- value of request's cookie
+* `config.parameter` -- value of configs's paramter
 
 
 #### Extra parameters
