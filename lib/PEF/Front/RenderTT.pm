@@ -118,6 +118,13 @@ sub handler {
 	$tt->define_vmethod('hash', model => $model);
 	$tt->define_vmethod(
 		'text',
+		config => sub {
+			my ($cfg_key) = @_;
+			$config{$cfg_key}
+		}
+	);
+	$tt->define_vmethod(
+		'text',
 		m => sub {
 			my ($msgid, @params) = @_;
 			msg_get($lang, $msgid, @params)->{message};
