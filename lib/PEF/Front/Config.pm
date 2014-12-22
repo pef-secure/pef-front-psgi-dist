@@ -63,7 +63,7 @@ my @std_var_params = qw{
   cfg_model_rpc
 };
 
-my %config_export;
+our %config_export;
 
 sub import {
 	my ($modname) = grep { /AppFrontConfig\.pm$/ } keys %INC;
@@ -143,7 +143,7 @@ sub std_www_static_captchas_path {
 	{
 		# removes cfg_www_static_dir() from cfg_www_static_captchas_dir() and adds '/'
 		substr (cfg_www_static_captchas_dir(), length (cfg_www_static_dir())) . '/';
-	} else {    
+	} else {
 		#must be overriden by user
 		'/captchas/';
 	}
@@ -171,8 +171,7 @@ sub std_model_rpc {
 
 sub TIEHASH {
 	my $classname = $_[0];
-	my %params    = %config_export;
-	return bless \%params, $classname;
+	bless {%config_export}, $classname;
 }
 
 sub FETCH {
