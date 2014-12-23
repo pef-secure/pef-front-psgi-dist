@@ -15,9 +15,10 @@ our @EXPORT = qw{
   get_model
   get_method_attrs
 };
-my %cache;
 
-sub collect_base_rules {
+our %model_cache;
+
+sub _collect_base_rules {
 	my ($method, $mr, $pr) = @_;
 	my %seen;
 	my %ret;
@@ -31,8 +32,8 @@ sub collect_base_rules {
 			answer_args => [],
 			message     => "Validation $method error: unknow base rule '$entry' for '$pr'",
 		  }
-		  unless exists $cache{'-base-'}{rules}{params}{$entry};
-		my $rules = $cache{'-base-'}{rules}{params}{$entry};
+		  unless exists $model_cache{'-base-'}{rules}{params}{$entry};
+		my $rules = $model_cache{'-base-'}{rules}{params}{$entry};
 		last if not defined $rules or (not ref $rules and $rules eq '');
 		if (not ref $rules) {
 			if (substr ($rules, 0, 1) eq '$') {
@@ -69,19 +70,19 @@ sub build_validator {
 		$mr = '' if not defined $mr;
 		$known_params{$pr} = undef;
 		if (!ref ($mr) and length $mr > 0 and substr ($mr, 0, 1) eq '$') {
-			$mr = collect_base_rules($rules->{method}, $mr, $pr);
+			$mr = _collect_base_rules($rules->{method}, $mr, $pr);
 		}
 		if (    ref $mr
 			and exists $mr->{base}
 			and defined $mr->{base}
 			and $mr->{base} ne '')
 		{
-			my $bmr = collect_base_rules($rules->{method}, $mr->{base}, $pr);
+			my $bmr = _collect_base_rules($rules->{method}, $mr->{base}, $pr);
 			$mr = {%$bmr, %$mr};
 		}
 		if (!ref ($mr)) {
 			$validator_sub .=
-			  "croak {result => 'BADPARAM', answer => 'Mandatory parameter \$1 is absent', "
+			    "croak {result => 'BADPARAM', answer => 'Mandatory parameter \$1 is absent', "
 			  . "answer_args => ['param-$pr']} "
 			  . "unless exists $jsn {$pr} ;\n";
 			$validator_sub .=
@@ -162,22 +163,22 @@ sub build_validator {
 					} elsif ($default =~ /^headers\.(.*)/) {
 						my $h = $1;
 						$h =~ s/\s*$//;
-						$h       = quote_var($h);
+						$h       = _quote_var($h);
 						$default = "$def {headers}->get_header($h)";
 					} elsif ($default =~ /^cookies\.(.*)/) {
 						my $c = $1;
 						$c =~ s/\s*$//;
-						$c              = quote_var($c);
+						$c              = _quote_var($c);
 						$default        = "$def {cookies}->{$c}";
 						$check_defaults = "exists($def {cookies}->{$c})";
 					} elsif ($default =~ /^config\.(.*)/) {
 						my $c = $1;
 						$c =~ s/\s*$//;
-						$c              = quote_var($c);
-						$default        = "PEF::Front::Config::cfg($c)";
+						$c       = _quote_var($c);
+						$default = "PEF::Front::Config::cfg($c)";
 					} else {
 						$default =~ s/\s*$//;
-						$default = quote_var($default);
+						$default = _quote_var($default);
 					}
 				}
 				if (exists $mr->{value}) {
@@ -188,8 +189,7 @@ sub build_validator {
 					}
 				} else {
 					$check_defaults .= ' and' if $check_defaults;
-					$validator_sub .=
-					  "$jsn {$pr} = $default if $check_defaults not exists $jsn {$pr};\n";
+					$validator_sub .= "$jsn {$pr} = $default if $check_defaults not exists $jsn {$pr};\n";
 				}
 			}
 			if (exists ($mr->{filter})) {
@@ -226,14 +226,13 @@ VLT
 				}
 			}
 			if (exists ($mr->{optional}) && $mr->{optional} eq 'empty') {
-				$validator_sub .=
-				  "if(exists($jsn {$pr}) and $jsn {$pr} ne '') {\n$sub_test\n}\n";
+				$validator_sub .= "if(exists($jsn {$pr}) and $jsn {$pr} ne '') {\n$sub_test\n}\n";
 			} elsif (exists ($mr->{optional}) && $mr->{optional}) {
 				$validator_sub .= "if(exists($jsn {$pr})) {\n$sub_test\n}\n";
 			} else {
 				$must_params{$pr} = undef;
 				$validator_sub .=
-				  "croak {result => 'BADPARAM', answer => 'Mandatory parameter \$1 is absent', "
+				    "croak {result => 'BADPARAM', answer => 'Mandatory parameter \$1 is absent', "
 				  . "answer_args => ['param-$pr']} "
 				  . "unless exists $jsn {$pr} ;\n";
 				$validator_sub .= $sub_test;
@@ -263,7 +262,7 @@ VLT
 	$validator_sub;
 }
 
-sub quote_var {
+sub _quote_var {
 	my $s = $_[0];
 	my $d = Data::Dumper->new([$s]);
 	$d->Terse(1);
@@ -274,10 +273,10 @@ sub quote_var {
 
 sub make_value_parser {
 	my $value = $_[0];
-	my $ret   = quote_var($value);
+	my $ret   = _quote_var($value);
 	if (substr ($value, 0, 3) eq 'TT ') {
 		my $exp = substr ($value, 3);
-		$exp = quote_var($exp);
+		$exp = _quote_var($exp);
 		if (substr ($exp, 0, 1) eq "'") {
 			substr ($exp, 0,  1, '');
 			substr ($exp, -1, 1, '');
@@ -299,13 +298,13 @@ sub make_value_parser {
 sub make_cookie_parser {
 	my ($name, $value) = @_;
 	$value = {value => $value} if not ref $value;
-	$name = quote_var($name);
+	$name = _quote_var($name);
 	$value->{path} = '/' if not $value->{path};
 	my $ret = qq~\t\$http_response->set_cookie($name, {\n~;
 	for my $pn (qw/value expires domain path secure max-age httponly/) {
 		if (exists $value->{$pn}) {
 			$ret .=
-			  "\t\t" . quote_var($pn) . ' => ' . make_value_parser($value->{$pn}) . ",\n";
+			  "\t\t" . _quote_var($pn) . ' => ' . make_value_parser($value->{$pn}) . ",\n";
 		}
 	}
 	$ret .= "\t\t(\$defaults->{scheme} eq 'https'?(secure => 1): ()),\n"
@@ -314,7 +313,7 @@ sub make_cookie_parser {
 	return $ret;
 }
 
-sub make_rules_parser {
+sub _make_rules_parser {
 	my ($start) = @_;
 	$start = {redirect => $start} if not ref $start or 'ARRAY' eq ref $start;
 	my $sub_int = "sub {\n";
@@ -324,10 +323,7 @@ sub make_rules_parser {
 			$redir = [$redir] if 'ARRAY' ne ref $redir;
 			my $rw = "\t{\n";
 			for my $r (@$redir) {
-				$rw .=
-				    "\t\t\$new_location = "
-				  . make_value_parser($r)
-				  . ";\n\t\tlast if \$new_location;\n";
+				$rw .= "\t\t\$new_location = " . make_value_parser($r) . ";\n\t\tlast if \$new_location;\n";
 			}
 			$rw      .= "\t}\n";
 			$sub_int .= "\tif(\$defaults->{src} ne 'ajax') { $rw }";
@@ -359,12 +355,12 @@ sub make_rules_parser {
 		} elsif ($cmd eq 'add-header') {
 			for my $h (keys %{$start->{$cmd}}) {
 				my $value = make_value_parser($start->{$cmd}{$h});
-				$sub_int .= "\t\$http_response->add_header(~ . quote_var($h) . qq~, $value);\n";
+				$sub_int .= "\t\$http_response->add_header(~ . _quote_var($h) . qq~, $value);\n";
 			}
 		} elsif ($cmd eq 'set-header') {
 			for my $h (keys %{$start->{$cmd}}) {
 				my $value = make_value_parser($start->{$cmd}{$h});
-				$sub_int .= "\t\$http_response->set_header(~ . quote_var($h) . qq~, $value);\n";
+				$sub_int .= "\t\$http_response->set_header(~ . _quote_var($h) . qq~, $value);\n";
 			}
 		} elsif ($cmd eq 'filter') {
 			my $full_func;
@@ -394,15 +390,14 @@ sub make_rules_parser {
 			}
 MRP
 		} elsif ($cmd eq 'answer') {
-			$sub_int .=
-			  qq~\t\$response->{answer} = ~ . make_value_parser($start->{$cmd}) . qq~;\n~;
+			$sub_int .= qq~\t\$response->{answer} = ~ . make_value_parser($start->{$cmd}) . qq~;\n~;
 		}
 	}
 	$sub_int .= "\t}";
 	return $sub_int;
 }
 
-sub build_result_processor {
+sub _build_result_processor {
 	my $result_rules = $_[0];
 	my $result_sub   = <<RSUB;
 	sub {
@@ -412,8 +407,8 @@ sub build_result_processor {
 RSUB
 	my %rc_array;
 	for my $rc (keys %{$result_rules}) {
-		my $qrc = quote_var($rc);
-		my $rsub = make_rules_parser($result_rules->{$rc} || {});
+		my $qrc = _quote_var($rc);
+		my $rsub = _make_rules_parser($result_rules->{$rc} || {});
 		$result_sub .= <<RSUB;
 		  $qrc => $rsub,
 RSUB
@@ -437,8 +432,8 @@ RSUB
 		return (\$new_location, \$response);
 	}
 RSUB
-	#print $result_sub;
-	return eval $result_sub;
+#print $result_sub;
+return eval $result_sub;
 }
 
 sub load_validation_rules {
@@ -455,9 +450,9 @@ sub load_validation_rules {
 	my $base_file = cfg_model_dir . "/-base-.yaml";
 	my @bfs       = stat ($base_file);
 	if (@bfs
-		&& (!exists ($cache{'-base-'}) || $cache{'-base-'}{modified} != $bfs[9]))
+		&& (!exists ($model_cache{'-base-'}) || $model_cache{'-base-'}{modified} != $bfs[9]))
 	{
-		%cache = ('-base-' => {modified => $bfs[9]});
+		%model_cache = ('-base-' => {modified => $bfs[9]});
 		open my $fi, "<",
 		  $base_file
 		  or croak {
@@ -478,10 +473,10 @@ sub load_validation_rules {
 			};
 		} else {
 			my $new_rules = $new_rules[0];
-			$cache{'-base-'}{rules} = $new_rules;
+			$model_cache{'-base-'}{rules} = $new_rules;
 		}
 	}
-	if (!exists ($cache{$method}) || $cache{$method}{modified} != $stats[9]) {
+	if (!exists ($model_cache{$method}) || $model_cache{$method}{modified} != $stats[9]) {
 		open my $fi, "<",
 		  $rules_file
 		  or croak {
@@ -502,7 +497,8 @@ sub load_validation_rules {
 		my $new_rules = $new_rules[0];
 		$new_rules->{method} = $method;
 		my $validator_sub = build_validator($new_rules);
-		eval "\$cache{\$method}{code} = $validator_sub";
+		$model_cache{$method}{code_text} = $validator_sub;
+		eval "\$model_cache{\$method}{code} = $validator_sub";
 		croak {
 			result        => 'INTERR',
 			answer        => 'Validator $1 error: $2',
@@ -511,7 +507,7 @@ sub load_validation_rules {
 		  }
 		  if $@;
 		for (keys %$new_rules) {
-			$cache{$method}{$_} = $new_rules->{$_} if $_ ne 'code';
+			$model_cache{$method}{$_} = $new_rules->{$_} if $_ ne 'code';
 		}
 		my $model;
 		if (!exists $new_rules->{model}) {
@@ -527,12 +523,12 @@ sub load_validation_rules {
 				$model = $new_rules->{model};
 			}
 		}
-		$cache{$method}{model} = $model;
+		$model_cache{$method}{model} = $model;
 		if (exists $new_rules->{result}) {
-			$cache{$method}{result_sub} =
-			  build_result_processor($new_rules->{result} || {});
+			$model_cache{$method}{result_sub} =
+			  _build_result_processor($new_rules->{result} || {});
 		}
-		$cache{$method}{modified} = $stats[9];
+		$model_cache{$method}{modified} = $stats[9];
 	}
 }
 
@@ -545,14 +541,14 @@ sub validate {
 		}
 	  );
 	load_validation_rules($method);
-	$cache{$method}{code}->($request, $defaults);
+	$model_cache{$method}{code}->($request, $defaults);
 }
 
 sub get_method_attrs {
 	my $request = $_[0];
 	my $method = ref ($request) ? $request->{method} : $request;
-	if (exists $cache{$method}{$_[1]}) {
-		return $cache{$method}{$_[1]};
+	if (exists $model_cache{$method}{$_[1]}) {
+		return $model_cache{$method}{$_[1]};
 	} else {
 		return;
 	}
