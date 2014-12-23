@@ -80,6 +80,18 @@ sub path {
 	return $self->{path};
 }
 
+sub note {
+	my ($self, $key, $value) = @_;
+	if (@_ == 3) {
+		$self->{note}{$key} = $value;
+	}
+	if (exists $self->{note}{$key}) {
+		$self->{note}{$key};
+	} else {
+		return;
+	}
+}
+
 sub param {
 	my ($self, $param, $value) = @_;
 	return $self->params->{$param} if not defined $value;
@@ -98,9 +110,7 @@ sub base {
 	my $self = $_[0];
 	return $self->{base} if exists $self->{base};
 	$self->{base} =
-	    $self->scheme . "://"
-	  . ($self->{env}{HTTP_HOST} || $self->{env}{SERVER_NAME})
-	  . $self->request_uri;
+	  $self->scheme . "://" . ($self->{env}{HTTP_HOST} || $self->{env}{SERVER_NAME}) . $self->request_uri;
 	$self->{base};
 }
 
@@ -132,10 +142,7 @@ sub _parse_urlencoded {
 		my ($name, $value) =
 		  map { tr/+/ /; s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg; $_ }
 		  split (/=/, $pair, 2);
-		eval {
-			$form->{decode_utf8($name)} = decode_utf8 $value
-			  if defined $name and $name ne '';
-		};
+		eval { $form->{decode_utf8($name)} = decode_utf8 $value if defined $name and $name ne ''; };
 	}
 	return $form;
 }
@@ -258,10 +265,8 @@ sub _parse_multipart_form {
 						content_type => $type || 'application/octet-stream',
 						(   exists ($form->{$current_field . '_id'})
 							  && !ref ($form->{$current_field . '_id'})
-							? (id => $self->remote_ip . "/"
-								  . $self->scheme . "/"
-								  . $self->hostname . "/"
-								  . $form->{$current_field . '_id'})
+							? (
+								id => $self->remote_ip . "/" . $self->scheme . "/" . $self->hostname . "/" . $form->{$current_field . '_id'})
 							: ()
 						)
 					);

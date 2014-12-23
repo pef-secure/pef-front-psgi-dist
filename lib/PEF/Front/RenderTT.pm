@@ -24,10 +24,9 @@ sub handler {
 	my $template = delete $defaults->{method};
 	$template =~ tr/ /_/;
 	my $template_file = "$template.html";
-	if (!-f cfg_template_dir($request->hostname, $lang) . "/" . $template_file) {
+	if (!-f cfg_template_dir($request, $lang) . "/" . $template_file) {
 		cfg_log_level_info
-		  && $logger->(
-			{level => "info", message => " template '$template_file' not found"});
+		  && $logger->({level => "info", message => " template '$template_file' not found"});
 		$http_response->status(404);
 		return $http_response->response();
 	}
@@ -94,8 +93,7 @@ sub handler {
 				}
 				if ($@) {
 					cfg_log_level_error
-					  && $logger->(
-						{level => "error", message => "error: " . Dumper($model, $@, $vreq)});
+					  && $logger->({level => "error", message => "error: " . Dumper($model, $@, $vreq)});
 					return {result => 'INTERR', answer => 'Internal error', answer_args => []};
 				}
 				if ($response->{result} eq 'OK' && $cache_attr) {
@@ -106,7 +104,7 @@ sub handler {
 		return $response;
 	};
 	my $tt = Template::Alloy->new(
-		INCLUDE_PATH => [cfg_template_dir($request->hostname, $lang)],
+		INCLUDE_PATH => [cfg_template_dir($request, $lang)],
 		COMPILE_DIR  => cfg_template_cache,
 		V2EQUALS     => 0,
 		ENCODING     => 'UTF-8',
@@ -117,7 +115,7 @@ sub handler {
 		'text',
 		config => sub {
 			my ($key) = @_;
-			PEF::Front::Config::cfg($key)
+			PEF::Front::Config::cfg($key);
 		}
 	);
 	$tt->define_vmethod(
@@ -212,8 +210,7 @@ sub handler {
 	return sub {
 		my $responder = $_[0];
 		$tt->process($template_file, $defaults, \$http_response->get_body->[0])
-		  or cfg_log_level_error
-		  && $logger->({level => "error", message => "error: " . $tt->error()});
+		  or cfg_log_level_error && $logger->({level => "error", message => "error: " . $tt->error()});
 		$responder->($http_response->response());
 	};
 }

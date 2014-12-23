@@ -161,7 +161,7 @@ _Important:_ You must not write `use PEF::Front::Config` in module `*::AppFrontC
 Some configuration parameters are functions with parameters.
 
 * `cfg_model_rpc($model)` -- function accept model name from apropriate parameter of description of model method
-* `cfg_template_dir($hosname, $lang)` -- function accept hostname and detected short language to determine template directory
+* `cfg_template_dir($request, $lang)` -- function accept current request object and detected short language to determine template directory
 
 # Typical usage
 
