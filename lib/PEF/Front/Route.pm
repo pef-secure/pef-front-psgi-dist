@@ -47,8 +47,7 @@ sub add_route {
 		if (ref ($rule) eq 'Regexp') {
 			if (!ref ($rewrite[$ri][$nurlpos])) {
 				$rewrite[$ri][$tranpos] =
-				  eval
-				  "sub {my \$request = \$_[0]; my \$url = \$request->path; return \$url if \$url =~ s\"$rule\""
+				    eval "sub {my \$request = \$_[0]; my \$url = \$request->path; return \$url if \$url =~ s\"$rule\""
 				  . $rewrite[$ri][$nurlpos] . "\""
 				  . (exists ($rewrite[$ri][$flagpos]{RE}) ? $rewrite[$ri][$flagpos]{RE} : "")
 				  . "; return }";
@@ -114,10 +113,7 @@ sub rewrite_route {
 				$npi           = $npi->[0];
 				$npi ||= '';
 				if ($rewrite_flags and not ref $rewrite_flags) {
-					$rewrite_flags = {
-						map { my ($p, $v) = split /=/, $_, 2; (uc ($p), $v) } split /[, ]+/,
-						$rewrite_flags
-					};
+					$rewrite_flags = {map { my ($p, $v) = split /=/, $_, 2; (uc ($p), $v) } split /[, ]+/, $rewrite_flags};
 				}
 			}
 			if (%$rewrite_flags and exists $rewrite_flags->{R}) {
@@ -150,16 +146,14 @@ sub prepare_defaults {
 	my $lang;
 	my ($src, $method, $params);
 	if (cfg_url_contains_lang) {
-		($lang, $src, $method, $params) =
-		  $request->path =~ m{^/(\w{2})/(app|ajax|submit|get)([^/]+)/?(.*)$};
+		($lang, $src, $method, $params) = $request->path =~ m{^/(\w{2})/(app|ajax|submit|get)([^/]+)/?(.*)$};
 		if (not defined $lang) {
 			my $http_response = PEF::Front::Response->new(base => $request->base);
 			$http_response->redirect(cfg_location_error, 301);
 			return $http_response;
 		}
 	} else {
-		($src, $method, $params) =
-		  $request->path =~ m{^/(app|ajax|submit|get)([^/]+)/?(.*)$};
+		($src, $method, $params) = $request->path =~ m{^/(app|ajax|submit|get)([^/]+)/?(.*)$};
 		if (not defined $method) {
 			my $http_response = PEF::Front::Response->new(base => $request->base);
 			$http_response->redirect(cfg_location_error, 301);
@@ -227,8 +221,7 @@ sub www_static_handler {
 	my $sfn = cfg_www_static_dir . $request->path;
 	if ($valid && -e $sfn && -r $sfn && -f $sfn) {
 		$http_response->status(200);
-		$http_response->set_header('content-type',
-			File::LibMagic->new->checktype_filename($sfn));
+		$http_response->set_header('content-type',   File::LibMagic->new->checktype_filename($sfn));
 		$http_response->set_header('content-length', -s $sfn);
 		open my $bh, "<", $sfn;
 		$http_response->set_body_handle($bh);
@@ -239,6 +232,8 @@ sub to_app {
 	sub {
 		my $request       = PEF::Front::Request->new($_[0]);
 		my $http_response = rewrite_route($request);
+		cfg_log_level_info
+		  && $request->logger->({level => "info", message => "serving request: " . $request->path});
 		return $http_response->response() if $http_response;
 		if (cfg_url_contains_lang
 			&& (length ($request->path) < 4 || substr ($request->path, 3, 1) ne '/'))
@@ -273,8 +268,7 @@ sub to_app {
 			my $cref = \&{$handler . '::handler'};
 			$cref->($request, $defaults);
 		} else {
-			$http_response =
-			  PEF::Front::Response->new(base => $request->base, status => 404);
+			$http_response = PEF::Front::Response->new(base => $request->base, status => 404);
 			www_static_handler($request, $http_response) if cfg_handle_static;
 			$http_response->response();
 		}
