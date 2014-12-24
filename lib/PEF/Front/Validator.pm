@@ -292,8 +292,12 @@ ATTR
 		},
 		optional => sub {
 			"";
+		},
+		base => sub {
+			"";
 		}
 	);
+	$attr_sub{can_string} = $attr_sub{can};
 	for my $par (keys %$method_rules) {
 		$pr = $par;
 		$mr = $method_rules->{$pr};
