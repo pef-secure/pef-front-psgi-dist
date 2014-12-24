@@ -350,11 +350,11 @@ ATTR
 			$validator_sub .= "if(exists($jsn {$pr})) {\n$sub_test\n}\n";
 		} else {
 			$must_params{$pr} = undef;
+			$validator_sub .= $sub_test;
 			$validator_sub .=
 			    "croak {result => 'BADPARAM', answer => 'Mandatory parameter \$1 is absent', "
 			  . "answer_args => ['param-$pr']} "
 			  . "unless exists $jsn {$pr} ;\n";
-			$validator_sub .= $sub_test;
 		}
 	}
 	if ($params_rule ne 'pass') {
