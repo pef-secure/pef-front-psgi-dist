@@ -350,13 +350,13 @@ ATTR
 		if (exists ($mr->{optional}) && $mr->{optional} eq 'empty') {
 			$validator_sub .= <<ATTR;
 			if(exists($jsn {$pr}) and $jsn {$pr} ne '') {
-				$sub_test;
+$sub_test
 			}
 ATTR
 		} elsif (exists ($mr->{optional}) && $mr->{optional}) {
 			$validator_sub .= <<ATTR;
 			if(exists($jsn {$pr})) {
-				$sub_test;
+$sub_test
 			}
 ATTR
 		} else {
@@ -375,8 +375,8 @@ ATTR
 		my $known_params_list = join ", ", map { _quote_var($_) . " => undef" } keys %known_params;
 		$validator_sub .= <<PARAM;
 		    {
-		    	my \%known_params = ($known_params_list);
-		  		for my \$pr(keys \%{\$_[0]}) {
+				my \%known_params = ($known_params_list);
+				for my \$pr(keys \%{\$_[0]}) {
 PARAM
 		if ($params_rule eq 'ignore') {
 			$validator_sub .= <<PARAM;
