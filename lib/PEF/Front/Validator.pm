@@ -55,7 +55,7 @@ sub _collect_base_rules {
 	\%ret;
 }
 
-sub build_validator {
+sub _build_validator {
 	my $rules         = $_[0];
 	my $method_rules  = $rules->{params} || {};
 	my $params_rule   = $rules->{extra_params} || 'ignore';
@@ -65,9 +65,249 @@ sub build_validator {
 	my $jsn           = '$_[0]->';
 	my $def           = '$_[1]->';
 	my @add_use;
-	for my $pr (keys %$method_rules) {
-		my $mr = $method_rules->{$pr};
+	my $pr;
+	my $mr;
+	my $make_default_sub = sub {
+		my ($default) = @_;
+		my $check_defaults = '';
+		if ($default !~ /^($RE{num}{int}|$RE{num}{real})$/) {
+			if ($default =~ /^defaults\.([\w\d].*)/) {
+				$default        = "$def {$1}";
+				$check_defaults = "exists($def {$1})";
+			} elsif ($default =~ /^headers\.(.*)/) {
+				my $h = $1;
+				$h =~ s/\s*$//;
+				$h       = _quote_var($h);
+				$default = "$def {headers}->get_header($h)";
+			} elsif ($default =~ /^cookies\.(.*)/) {
+				my $c = $1;
+				$c =~ s/\s*$//;
+				$c              = _quote_var($c);
+				$default        = "$def {cookies}->{$c}";
+				$check_defaults = "exists($def {cookies}->{$c})";
+			} elsif ($default =~ /^config\.(.*)/) {
+				my $c = $1;
+				$c =~ s/\s*$//;
+				$c       = _quote_var($c);
+				$default = "PEF::Front::Config::cfg($c)";
+			} else {
+				$default =~ s/\s*$//;
+				$default = _quote_var($default);
+			}
+		}
+		($default, $check_defaults);
+	};
+	my %attr_sub = (
+		regex => sub {
+			my $re = ref ($mr) ? $mr->{regex} : $mr;
+			return '' if !defined ($mr) || $mr eq '';
+			<<ATTR;
+		croak {
+			result => 'BADPARAM',
+			answer => 'Bad parameter \$1',
+			answer_args => ['param-$pr']
+		} unless $jsn {$pr} =~ m/$mr/;
+ATTR
+		},
+		captcha => sub {
+			return '' if !defined ($mr->{captcha}) || $mr->{captcha} eq '';
+			<<ATTR;
+			if($jsn {$pr} ne 'nocheck') {
+				croak {
+					result => 'BADPARAM', 
+					answer => 'Bad parameter \$1: bad captcha', 
+					answer_args => ['param-$pr']
+				} unless PEF::Front::Captcha::check_captcha($jsn {$pr}, $jsn {$mr->{captcha}});
+			}
+ATTR
+		},
+		type => sub {
+			return '' if !defined ($mr->{type}) || $mr->{type} eq '';
+			my $type = uc (substr ($mr->{type}, 0, 1)) eq 'F' ? 'PEF::Front::File' : uc $mr->{type};
+			<<ATTR;
+			croak {
+				result => 'BADPARAM', 
+				answer => 'Bad type parameter \$1', 
+				answer_args => ['param-$pr']
+			} unless ref ($jsn {$pr}) eq '$type';
+ATTR
+		},
+		'max-size' => sub {
+			return '' if !defined ($mr->{'max-size'}) || $mr->{'max-size'} eq '';
+			<<ATTR;
+			croak {
+				result => 'BADPARAM', 
+				answer => 'Parameter \$1 is too big', 
+				answer_args => ['param-$pr']
+			} if (
+				!ref($jsn {$pr})
+				? length($jsn {$pr})
+				: ref($jsn {$pr}) eq 'HASH'
+				? scalar(keys \%{$jsn {$pr}})
+				: scalar(\@{$jsn {$pr}}) 
+				) >  $mr->{'max-size'};
+ATTR
+		},
+		'min-size' => sub {
+			return '' if !defined ($mr->{'max-size'}) || $mr->{'max-size'} eq '';
+			<<ATTR;
+			croak {
+				result => 'BADPARAM', 
+				answer => 'Parameter \$1 is too small', 
+				answer_args => ['param-$pr']
+			} if (
+				!ref($jsn {$pr})
+				? length($jsn {$pr})
+				: ref($jsn {$pr}) eq 'HASH'
+				? scalar(keys \%{$jsn {$pr}})
+				: scalar(\@{$jsn {$pr}}) 
+				) <  $mr->{'min-size'};
+ATTR
+		},
+		can => sub {
+			my $can = exists ($mr->{can}) ? $mr->{can} : $mr->{can_string};
+			return '' if !defined ($can);
+			my @can = ref ($can) ? @{$can} : ($can);
+			return '' if !@can;
+			my $can_list = join ", ", map { _quote_var($_) } @can;
+			<<ATTR;
+			{
+				my \$found = 0;
+				local \$_;
+				for($can_list) {
+					if(\$_ eq $jsn {$pr}) {
+						\$found = 1;
+						last;
+					} 
+				}
+				croak {
+					result => 'BADPARAM',
+					answer => 'Parameter \$1 has not allowed value',
+					answer_args => ['param-$pr']
+				} unless \$found;
+			}
+ATTR
+		},
+		can_number => sub {
+			return '' if !defined ($mr->{can_number}) || $mr->{can_number} eq '';
+			my @can = ref ($mr->{can_number}) ? @{$mr->{can_number}} : ($mr->{can_number});
+			return '' if !@can;
+			my $can_list = join ", ", map { _quote_var($_) } @can;
+			<<ATTR;
+			{
+				my \$found = 0;
+				local \$_;
+				for($can_list) {
+					if(\$_ == $jsn {$pr}) {
+						\$found = 1;
+						last;
+					} 
+				}
+				croak {
+					result => 'BADPARAM',
+					answer => 'Parameter \$1 has not allowed value',
+					answer_args => ['param-$pr']
+				} unless \$found;
+			}
+ATTR
+		},
+		default => sub {
+			my ($default, $check_defaults) = $make_default_sub->($mr->{default});
+			$check_defaults .= ' and' if $check_defaults;
+			<<ATTR;
+			$jsn {$pr} = $default if $check_defaults not exists $jsn {$pr};
+ATTR
+		},
+		value => sub {
+			my ($default, $check_defaults) = $make_default_sub->($mr->{value});
+			if ($check_defaults) {
+				<<ATTR;
+			$jsn {$pr} = $default if $check_defaults;
+ATTR
+			} else {
+				<<ATTR;
+			$jsn {$pr} = $default;
+ATTR
+			}
+		},
+		filter => sub {
+			return '' if !defined ($mr->{filter}) || $mr->{filter} eq '';
+			my $filter_sub = '';
+			if ($mr->{filter} =~ /^\w+::/) {
+				my $fcall = cfg_app_namespace . "InFilter::$mr->{filter}($jsn {$pr}, \$_[1]);";
+				$filter_sub .= <<ATTR;
+			eval { $jsn {$pr} = $fcall };
+ATTR
+				if (exists ($mr->{optional}) && $mr->{optional}) {
+					$filter_sub .= <<ATTR;
+			if(\$@) {
+				delete $jsn {$pr}; 
+				cfg_log_level_info()
+				&& $def {request}->logger->({
+					level => "info", 
+					message => "dropped optional parameter $pr: input filter: " . Dumper(\$@)
+				});
+			}
+ATTR
+				} else {
+					$filter_sub .= <<ATTR;
+			if(\$@) {
+				cfg_log_level_error()
+				&& $def {request}->logger->({
+					level => "error", 
+					message => "input filter: " . Dumper(\$@)
+				});
+				croak {
+					result => 'BADPARAM', 
+					answer => 'Bad parameter \$1', 
+					answer_args => ['param-$pr']
+				};
+			}
+ATTR
+				}
+				my $cl = cfg_app_namespace . "InFilter::$mr->{filter}";
+				my $use_module = substr ($cl, 0, rindex ($cl, "::"));
+				eval "use $use_module";
+				if ($@) {
+					croak {
+						result      => 'INTERR',
+						answer      => 'Error loading method in filter module $1 for method $2: $3',
+						answer_args => [$use_module, $rules->{method}, $@]
+					};
+				}
+			} else {
+				my $rearr =
+				    ref ($mr->{filter}) eq 'ARRAY' ? $mr->{filter}
+				  : ref ($mr->{filter})            ? []
+				  :                                  [$mr->{filter}];
+				for my $re (@$rearr) {
+					if ($re =~ /^(s|tr|y)\b/) {
+						$filter_sub .= <<ATTR;
+				$jsn {$pr} =~ $re;
+ATTR
+					}
+				}
+			}
+			$filter_sub;
+		},
+		optional => sub {
+			"";
+		}
+	);
+	for my $par (keys %$method_rules) {
+		$pr = $par;
+		$mr = $method_rules->{$pr};
 		$mr = '' if not defined $mr;
+		my $last_sym = substr ($pr, -1, 1);
+		if ($last_sym eq '%' || $last_sym eq '@' || $last_sym eq '*') {
+			my $type = $last_sym eq '%' ? 'HASH' : $last_sym eq '@' ? 'ARRAY' : 'FILE';
+			if (ref ($mr)) {
+				$mr->{type} = $type;
+			} else {
+				$mr = {type => $type};
+			}
+			substr ($pr, -1, 1, '');
+		}
 		$known_params{$pr} = undef;
 		if (!ref ($mr) and length $mr > 0 and substr ($mr, 0, 1) eq '$') {
 			$mr = _collect_base_rules($rules->{method}, $mr, $pr);
@@ -80,163 +320,37 @@ sub build_validator {
 			my $bmr = _collect_base_rules($rules->{method}, $mr->{base}, $pr);
 			$mr = {%$bmr, %$mr};
 		}
-		if (!ref ($mr)) {
+		if (not ref $mr) {
+			if ($mr eq '') {
+				$mr = {};
+			} else {
+				$mr = {regex => $mr};
+			}
+		}
+		my $sub_test = '';
+		for my $attr (keys %$mr) {
+			substr ($attr, 0, 1, '') if substr ($attr, 0, 1) eq '^';
+			if (exists ($attr_sub{$attr})) {
+				$sub_test .= $attr_sub{$attr}();
+			} else {
+				croak {
+					result      => 'INTERR',
+					answer      => 'Unknown attribute $1 for paramter $2 method $3',
+					answer_args => [$attr, $pr, $rules->{method}]
+				};
+			}
+		}
+		if (exists ($mr->{optional}) && $mr->{optional} eq 'empty') {
+			$validator_sub .= "if(exists($jsn {$pr}) and $jsn {$pr} ne '') {\n$sub_test\n}\n";
+		} elsif (exists ($mr->{optional}) && $mr->{optional}) {
+			$validator_sub .= "if(exists($jsn {$pr})) {\n$sub_test\n}\n";
+		} else {
+			$must_params{$pr} = undef;
 			$validator_sub .=
 			    "croak {result => 'BADPARAM', answer => 'Mandatory parameter \$1 is absent', "
 			  . "answer_args => ['param-$pr']} "
 			  . "unless exists $jsn {$pr} ;\n";
-			$validator_sub .=
-			    "croak {result => 'BADPARAM', answer => 'Bad parameter \$1', "
-			  . "answer_args => ['param-$pr']} "
-			  . "unless $jsn {$pr} =~ m/$mr/;\n"
-			  if $mr ne '';
-			$must_params{$pr} = undef;
-		} else {
-			my $sub_test = '';
-			if (exists ($mr->{regex})) {
-				$sub_test .=
-				    "croak {result => 'BADPARAM', answer => 'Bad parameter \$1', "
-				  . "answer_args => ['param-$pr']} "
-				  . "unless $jsn {$pr} =~ m/$mr->{regex}/;\n";
-			}
-			if (exists ($mr->{captcha}) && $mr->{captcha} ne '') {
-				$sub_test .=
-				    "if($jsn {$pr} ne 'nocheck') {\n"
-				  . "\tcroak {result => 'BADPARAM', answer => 'Bad parameter \$1: bad captcha', "
-				  . "answer_args => ['param-$pr']}\n"
-				  . "\t\tunless PEF::Front::Captcha::check_captcha($jsn {$pr}, $jsn {$mr->{captcha}}) ;\n}\n";
-			}
-			if (exists ($mr->{type})) {
-				if (uc (substr ($mr->{type}, 0, 1)) eq 'F') {
-					$sub_test .=
-					    "croak {result => 'BADPARAM', answer => 'Bad type parameter \$1', "
-					  . "answer_args => ['param-$pr']} "
-					  . "unless ref ($jsn {$pr}) eq 'PEF::Front::File';\n";
-				} else {
-					$sub_test .=
-					    "croak {result => 'BADPARAM', answer => 'Bad type parameter \$1', "
-					  . "answer_args => ['param-$pr']} "
-					  . "unless ref ($jsn {$pr}) eq '"
-					  . uc ($mr->{type}) . "';\n";
-				}
-			}
-			if (exists ($mr->{'max-size'})) {
-				$sub_test .=
-				    "croak {result => 'BADPARAM', answer => 'Parameter \$1 is too big', "
-				  . "answer_args => ['param-$pr']}\n"
-				  . "\tif ( !ref($jsn {$pr})? length($jsn {$pr}): ref($jsn {$pr}) eq 'HASH'? scalar(keys \%{$jsn {$pr}}): scalar(\@{$jsn {$pr}}) ) >  $mr->{'max-size'};\n";
-			}
-			if (exists ($mr->{'min-size'})) {
-				$sub_test .=
-				    "croak {result => 'BADPARAM', answer => 'Parameter \$1 is too short', "
-				  . "answer_args => ['param-$pr']}\n"
-				  . "\tif ( !ref($jsn {$pr})? length($jsn {$pr}): ref($jsn {$pr}) eq 'HASH'? scalar(keys \%{$jsn {$pr}}): scalar(\@{$jsn {$pr}}) ) <  $mr->{'min-size'};\n";
-			}
-			if (exists ($mr->{can}) || exists ($mr->{can_string})) {
-				my $can = exists ($mr->{can}) ? $mr->{can} : $mr->{can_string};
-				my @can = ref ($can)          ? @{$can}    : ($can);
-				$sub_test .=
-				    "{ my \$found = 0; local \$_; foreach ("
-				  . join (", ", map { "'$_'" } @can)
-				  . "){ if(\$_ eq $jsn {$pr}) { \$found = 1; last } }\n"
-				  . "croak {result => 'BADPARAM', answer => 'Parameter \$1 has not allowed value', "
-				  . "answer_args => ['param-$pr']} "
-				  . "unless \$found}\n";
-			}
-			if (exists ($mr->{can_number})) {
-				my @can = ref ($mr->{can_number}) ? @{$mr->{can_number}} : ($mr->{can_number});
-				$sub_test .=
-				    "{ my \$found = 0; local \$_; foreach ("
-				  . join (", ", @can)
-				  . "){ if(\$_ == $jsn {$pr}) { \$found = 1; last } }\n"
-				  . "croak {result => 'BADPARAM', answer => 'Parameter \$1 has not allowed value', "
-				  . "answer_args => ['param-$pr']} "
-				  . "unless \$found}\n";
-			}
-			if (exists ($mr->{default}) || exists ($mr->{value})) {
-				my $default = exists ($mr->{value}) ? $mr->{value} : $mr->{default};
-				my $check_defaults = '';
-				if ($default !~ /^($RE{num}{int}|$RE{num}{real})$/) {
-					if ($default =~ /^defaults\.([\w\d].*)/) {
-						$default        = "$def {$1}";
-						$check_defaults = "exists($def {$1})";
-					} elsif ($default =~ /^headers\.(.*)/) {
-						my $h = $1;
-						$h =~ s/\s*$//;
-						$h       = _quote_var($h);
-						$default = "$def {headers}->get_header($h)";
-					} elsif ($default =~ /^cookies\.(.*)/) {
-						my $c = $1;
-						$c =~ s/\s*$//;
-						$c              = _quote_var($c);
-						$default        = "$def {cookies}->{$c}";
-						$check_defaults = "exists($def {cookies}->{$c})";
-					} elsif ($default =~ /^config\.(.*)/) {
-						my $c = $1;
-						$c =~ s/\s*$//;
-						$c       = _quote_var($c);
-						$default = "PEF::Front::Config::cfg($c)";
-					} else {
-						$default =~ s/\s*$//;
-						$default = _quote_var($default);
-					}
-				}
-				if (exists $mr->{value}) {
-					if ($check_defaults) {
-						$validator_sub .= "$jsn {$pr} = $default if $check_defaults;\n";
-					} else {
-						$validator_sub .= "$jsn {$pr} = $default;\n";
-					}
-				} else {
-					$check_defaults .= ' and' if $check_defaults;
-					$validator_sub .= "$jsn {$pr} = $default if $check_defaults not exists $jsn {$pr};\n";
-				}
-			}
-			if (exists ($mr->{filter})) {
-				if ($mr->{filter} =~ /^\w+::/) {
-					my $fcall = cfg_app_namespace . "InFilter::$mr->{filter}($jsn {$pr}, \$_[1]);";
-					$sub_test .= "eval { $jsn {$pr} = $fcall};\n";
-					if (exists ($mr->{optional}) && $mr->{optional}) {
-						$sub_test .= <<VLT;
-if(\$@) {
-	delete $jsn {$pr}; 
-	cfg_log_level_info()
-	&& $def {request}->logger->({level => "info", message => "dropped optional parameter $pr: input filter: " . Dumper(\$@)});
-}
-VLT
-					} else {
-						$sub_test .= <<VLT;
-if(\$@) {
-	cfg_log_level_error()
-	&& $def {request}->logger->({level => "error", message => "input filter: " . Dumper(\$@)});
-	croak {result => 'BADPARAM', answer => 'Bad parameter \$1', answer_args => ['param-$pr']};
-}
-VLT
-					}
-					my $cl = cfg_app_namespace . "InFilter::$mr->{filter}";
-					push @add_use, substr ($cl, 0, rindex ($cl, "::"));
-				} else {
-					my $rearr =
-					    ref ($mr->{filter}) eq 'ARRAY' ? $mr->{filter}
-					  : ref ($mr->{filter})            ? []
-					  :                                  [$mr->{filter}];
-					for my $re (@$rearr) {
-						$sub_test .= "$jsn {$pr} =~ $re;\n" if $re =~ /^(s|tr|y)\b/;
-					}
-				}
-			}
-			if (exists ($mr->{optional}) && $mr->{optional} eq 'empty') {
-				$validator_sub .= "if(exists($jsn {$pr}) and $jsn {$pr} ne '') {\n$sub_test\n}\n";
-			} elsif (exists ($mr->{optional}) && $mr->{optional}) {
-				$validator_sub .= "if(exists($jsn {$pr})) {\n$sub_test\n}\n";
-			} else {
-				$must_params{$pr} = undef;
-				$validator_sub .=
-				    "croak {result => 'BADPARAM', answer => 'Mandatory parameter \$1 is absent', "
-				  . "answer_args => ['param-$pr']} "
-				  . "unless exists $jsn {$pr} ;\n";
-				$validator_sub .= $sub_test;
-			}
+			$validator_sub .= $sub_test;
 		}
 	}
 	if ($params_rule ne 'pass') {
@@ -295,7 +409,7 @@ sub make_value_parser {
 	return $ret;
 }
 
-sub make_cookie_parser {
+sub _make_cookie_parser {
 	my ($name, $value) = @_;
 	$value = {value => $value} if not ref $value;
 	$name = _quote_var($name);
@@ -329,7 +443,7 @@ sub _make_rules_parser {
 			$sub_int .= "\tif(\$defaults->{src} ne 'ajax') { $rw }";
 		} elsif ($cmd eq 'set-cookie') {
 			for my $c (keys %{$start->{$cmd}}) {
-				$sub_int .= make_cookie_parser($c => $start->{$cmd}{$c});
+				$sub_int .= _make_cookie_parser($c => $start->{$cmd}{$c});
 			}
 		} elsif ($cmd eq 'unset-cookie') {
 			my $unset = $start->{$cmd};
@@ -339,12 +453,12 @@ sub _make_rules_parser {
 					$ca->{expires} = cfg_cookie_unset_negative_expire
 					  if not exists $ca->{expires};
 					$ca->{value} = '' if not exists $ca->{value};
-					$sub_int .= make_cookie_parser($c => $ca);
+					$sub_int .= _make_cookie_parser($c => $ca);
 				}
 			} else {
 				$unset = [$unset] if not ref $unset;
 				for my $c (@$unset) {
-					$sub_int .= make_cookie_parser(
+					$sub_int .= _make_cookie_parser(
 						$c => {
 							value   => '',
 							expires => cfg_cookie_unset_negative_expire
@@ -432,8 +546,8 @@ RSUB
 		return (\$new_location, \$response);
 	}
 RSUB
-#print $result_sub;
-return eval $result_sub;
+	#print $result_sub;
+	return eval $result_sub;
 }
 
 sub load_validation_rules {
@@ -496,7 +610,7 @@ sub load_validation_rules {
 		  if $@;
 		my $new_rules = $new_rules[0];
 		$new_rules->{method} = $method;
-		my $validator_sub = build_validator($new_rules);
+		my $validator_sub = _build_validator($new_rules);
 		$model_cache{$method}{code_text} = $validator_sub;
 		eval "\$model_cache{\$method}{code} = $validator_sub";
 		croak {
