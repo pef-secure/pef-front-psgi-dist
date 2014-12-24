@@ -64,7 +64,6 @@ sub _build_validator {
 	my $validator_sub = "sub { \n";
 	my $jsn           = '$_[0]->';
 	my $def           = '$_[1]->';
-	my @add_use;
 	my $pr;
 	my $mr;
 	my $make_default_sub = sub {
@@ -335,7 +334,11 @@ ATTR
 		for my $attr (keys %$mr) {
 			substr ($attr, 0, 1, '') if substr ($attr, 0, 1) eq '^';
 			if (exists ($attr_sub{$attr})) {
-				$sub_test .= $attr_sub{$attr}();
+				if ($attr eq 'default' || $attr eq 'value') {
+					$validator_sub .= $attr_sub{$attr}();
+				} else {
+					$sub_test .= $attr_sub{$attr}();
+				}
 			} else {
 				croak {
 					result      => 'INTERR',
@@ -345,38 +348,55 @@ ATTR
 			}
 		}
 		if (exists ($mr->{optional}) && $mr->{optional} eq 'empty') {
-			$validator_sub .= "if(exists($jsn {$pr}) and $jsn {$pr} ne '') {\n$sub_test\n}\n";
+			$validator_sub .= <<ATTR;
+			if(exists($jsn {$pr}) and $jsn {$pr} ne '') {
+				$sub_test;
+			}
+ATTR
 		} elsif (exists ($mr->{optional}) && $mr->{optional}) {
-			$validator_sub .= "if(exists($jsn {$pr})) {\n$sub_test\n}\n";
+			$validator_sub .= <<ATTR;
+			if(exists($jsn {$pr})) {
+				$sub_test;
+			}
+ATTR
 		} else {
 			$must_params{$pr} = undef;
 			$validator_sub .= $sub_test;
-			$validator_sub .=
-			    "croak {result => 'BADPARAM', answer => 'Mandatory parameter \$1 is absent', "
-			  . "answer_args => ['param-$pr']} "
-			  . "unless exists $jsn {$pr} ;\n";
+			$validator_sub .= <<ATTR
+		    croak {
+		    	result => 'BADPARAM', 
+		    	answer => 'Mandatory parameter \$1 is absent', 
+		    	answer_args => ['param-$pr']
+		    } unless exists $jsn {$pr} ;
+ATTR
 		}
 	}
 	if ($params_rule ne 'pass') {
-		$validator_sub .=
-		    "{my \%known_params; \@known_params{"
-		  . join (", ", map { "'$_'" } keys %known_params)
-		  . "} = undef;\n"
-		  . "for my \$pr(keys \%{\$_[0]}) {";
+		my $known_params_list = join ", ", map { _quote_var($_) . " => undef" } keys %known_params;
+		$validator_sub .= <<PARAM;
+		    {
+		    	my \%known_params = ($known_params_list);
+		  		for my \$pr(keys \%{\$_[0]}) {
+PARAM
 		if ($params_rule eq 'ignore') {
-			$validator_sub .= "if(!exists(\$known_params {\$pr})) { delete $jsn {\$pr} }";
+			$validator_sub .= <<PARAM;
+					delete $jsn {\$pr} if !exists(\$known_params {\$pr});
+PARAM
 		} elsif ($params_rule eq 'disallow') {
-			$validator_sub .=
-			    "if(!exists(\$known_params {\$pr})) { "
-			  . "croak {result => 'BADPARAM', answer => 'Parameter \$1 is not allowed here', answer_args => ['\$pr']} }";
+			$validator_sub .= <<PARAM;
+					croak {
+						result => 'BADPARAM', 
+						answer => 'Parameter \$1 is not allowed here', 
+						answer_args => ['\$pr']
+					} if !exists(\$known_params {\$pr});
+PARAM
 		}
-		$validator_sub .= "}\n}\n";
+		$validator_sub .= <<PARAM;
+		  		}
+		    }
+PARAM
 	}
-	$validator_sub .= "\$_[0]\n};";
-	if (@add_use) {
-		my $use = join ("\n", map { "use $_;" } @add_use);
-		eval $use;
-	}
+	$validator_sub .= "\$_[0]\n}";
 	$validator_sub;
 }
 
