@@ -100,13 +100,13 @@ sub _build_validator {
 	my %attr_sub = (
 		regex => sub {
 			my $re = ref ($mr) ? $mr->{regex} : $mr;
-			return '' if !defined ($mr) || $mr eq '';
+			return '' if !defined ($re) || $re eq '';
 			<<ATTR;
 		croak {
 			result => 'BADPARAM',
 			answer => 'Bad parameter \$1',
 			answer_args => ['param-$pr']
-		} unless $jsn {$pr} =~ m/$mr/;
+		} unless $jsn {$pr} =~ m/$re/;
 ATTR
 		},
 		captcha => sub {
