@@ -24,10 +24,19 @@ sub handler {
 	my $template = delete $defaults->{method};
 	$template =~ tr/ /_/;
 	my $template_file = "$template.html";
-	my $full_template_file = cfg_template_dir($request, $lang) . "/" . $template_file;
-	if (!-f $full_template_file) {
+	my $found         = 0;
+	for my $tdir ((cfg_template_dir($request, $lang))) {
+		my $full_template_file = $tdir . "/" . $template_file;
+		if (-f $full_template_file) {
+			$found = 1;
+			cfg_log_level_info
+			  && $logger->({level => "info", message => "found template '$full_template_file'"});
+			last;
+		}
+	}
+	if (!$found) {
 		cfg_log_level_info
-		  && $logger->({level => "info", message => " template '$full_template_file' not found"});
+		  && $logger->({level => "info", message => "template '$template' not found"});
 		$http_response->status(404);
 		return $http_response->response();
 	}
