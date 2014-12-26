@@ -235,6 +235,7 @@ ATTR
 			if ($mr->{filter} =~ /^\w+::/) {
 				my $fcall = cfg_app_namespace . "InFilter::$mr->{filter}($jsn {$pr}, \$_[1]);";
 				$filter_sub .= <<ATTR;
+		if(exists $jsn {$pr}) {
 			eval { $jsn {$pr} = $fcall };
 ATTR
 				if (exists ($mr->{optional}) && $mr->{optional}) {
@@ -263,7 +264,11 @@ ATTR
 				};
 			}
 ATTR
+
 				}
+				$filter_sub .= <<ATTR;
+		}
+ATTR
 				my $cl = cfg_app_namespace . "InFilter::$mr->{filter}";
 				my $use_module = substr ($cl, 0, rindex ($cl, "::"));
 				eval "use $use_module";
