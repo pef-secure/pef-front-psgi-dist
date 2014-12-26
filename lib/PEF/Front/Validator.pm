@@ -336,7 +336,7 @@ ATTR
 			}
 		}
 		my $sub_test = '';
-		for my $attr (keys %$mr) {
+		for my $attr (sort { $a eq 'filter' ? 1 : $b eq 'filter' ? -1 : $a cmp $b } keys %$mr) {
 			substr ($attr, 0, 1, '') if substr ($attr, 0, 1) eq '^';
 			if (exists ($attr_sub{$attr})) {
 				if ($attr eq 'default' || $attr eq 'value') {
