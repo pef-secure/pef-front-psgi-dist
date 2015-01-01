@@ -144,8 +144,8 @@ sub ajax {
 				}
 				shift @{$response->{answer_cookies}};
 			} else {
-				$http_response->set_cookie($response->{answer_headers}[0],
-					$response->{answer_headers}[1]);
+				$http_response->set_cookie($response->{answer_cookies}[0],
+					$response->{answer_cookies}[1]);
 				splice @{$response->{answer_cookies}}, 0, 2;
 			}
 		}
@@ -154,7 +154,7 @@ sub ajax {
 	if ($json) {
 		if (exists $response->{answer} and not exists $response->{answer_no_nls}) {
 			my $args = exists ($response->{answer_args}) ? $response->{answer_args} : [];
-			$args ||= [];
+			$args = [$args] if 'ARRAY' ne ref $args;
 			$response->{answer} = msg_get($lang, $response->{answer}, @$args)->{message};
 		}
 		$http_response->content_type('application/json; charset=utf-8');
