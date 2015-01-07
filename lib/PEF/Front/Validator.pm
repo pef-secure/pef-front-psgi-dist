@@ -104,7 +104,7 @@ sub _build_validator {
 		croak {
 			result => 'BADPARAM',
 			answer => 'Bad parameter \$1',
-			answer_args => ['param-$pr']
+			answer_args => ['$pr']
 		} unless $jsn {$pr} =~ m/$re/;
 ATTR
 		},
@@ -115,7 +115,7 @@ ATTR
 				croak {
 					result => 'BADPARAM', 
 					answer => 'Bad parameter \$1: bad captcha', 
-					answer_args => ['param-$pr']
+					answer_args => ['$pr']
 				} unless PEF::Front::Captcha::check_captcha($jsn {$pr}, $jsn {$mr->{captcha}});
 			}
 ATTR
@@ -127,7 +127,7 @@ ATTR
 			croak {
 				result => 'BADPARAM', 
 				answer => 'Bad type parameter \$1', 
-				answer_args => ['param-$pr']
+				answer_args => ['$pr']
 			} unless ref ($jsn {$pr}) eq '$type';
 ATTR
 		},
@@ -137,7 +137,7 @@ ATTR
 			croak {
 				result => 'BADPARAM', 
 				answer => 'Parameter \$1 is too big', 
-				answer_args => ['param-$pr']
+				answer_args => ['$pr']
 			} if (
 				!ref($jsn {$pr})
 				? length($jsn {$pr})
@@ -153,7 +153,7 @@ ATTR
 			croak {
 				result => 'BADPARAM', 
 				answer => 'Parameter \$1 is too small', 
-				answer_args => ['param-$pr']
+				answer_args => ['$pr']
 			} if (
 				!ref($jsn {$pr})
 				? length($jsn {$pr})
@@ -182,7 +182,7 @@ ATTR
 				croak {
 					result => 'BADPARAM',
 					answer => 'Parameter \$1 has not allowed value',
-					answer_args => ['param-$pr']
+					answer_args => ['$pr']
 				} unless \$found;
 			}
 ATTR
@@ -205,7 +205,7 @@ ATTR
 				croak {
 					result => 'BADPARAM',
 					answer => 'Parameter \$1 has not allowed value',
-					answer_args => ['param-$pr']
+					answer_args => ['$pr']
 				} unless \$found;
 			}
 ATTR
@@ -241,27 +241,57 @@ ATTR
 				if (exists ($mr->{optional}) && $mr->{optional}) {
 					$filter_sub .= <<ATTR;
 			if(\$@) {
-				delete $jsn {$pr}; 
-				cfg_log_level_info()
-				&& $def {request}->logger->({
-					level => "info", 
-					message => "dropped optional parameter $pr: input filter: " . Dumper(\$@)
-				});
+				if(ref \$@ and 'HASH' eq ref \$@ and exists \$@->{answer}) {
+					my \$response = {
+						result => 'BADPARAM',
+						answer => \$@->{answer}
+					};
+					\$response->{result} = \$@->{result} if exists \$@->{result};
+					\$response->{answer_args} = \$@->{answer_args} if exists \$@->{answer_args};
+					cfg_log_level_info()
+					&& $def {request}->logger->({
+						level => "info", 
+						message => "parameter $pr was not validate by input filter: " . Dumper(\$@)
+					});
+					croak \$response;
+				} else {
+					delete $jsn {$pr}; 
+					cfg_log_level_info()
+					&& $def {request}->logger->({
+						level => "info", 
+						message => "dropped optional parameter $pr: input filter: " . Dumper(\$@)
+					});
+				}
 			}
 ATTR
 				} else {
 					$filter_sub .= <<ATTR;
 			if(\$@) {
-				cfg_log_level_error()
-				&& $def {request}->logger->({
-					level => "error", 
-					message => "input filter: " . Dumper(\$@)
-				});
-				croak {
-					result => 'BADPARAM', 
-					answer => 'Bad parameter \$1', 
-					answer_args => ['param-$pr']
-				};
+				if(ref \$@ and 'HASH' eq ref \$@ and exists \$@->{answer}) {
+					my \$response = {
+						result => 'BADPARAM',
+						answer => \$@->{answer}
+					};
+					\$response->{result} = \$@->{result} if exists \$@->{result};
+					\$response->{answer_args} = \$@->{answer_args} if exists \$@->{answer_args};
+					cfg_log_level_info()
+					&& $def {request}->logger->({
+						level => "info", 
+						message => "parameter $pr was not validate by input filter: " . Dumper(\$@)
+					});
+					croak \$response;
+				} else {
+					cfg_log_level_error()
+					&& $def {request}->logger->({
+						level => "error", 
+						message => "input filter: " . Dumper(\$@)
+					});
+					croak {
+						result => 'BADPARAM', 
+						answer => 'Bad parameter \$1', 
+						answer_args => ['$pr']
+					};
+				}
 			}
 ATTR
 
@@ -371,7 +401,7 @@ ATTR
 		    croak {
 		    	result => 'BADPARAM', 
 		    	answer => 'Mandatory parameter \$1 is absent', 
-		    	answer_args => ['param-$pr']
+		    	answer_args => ['$pr']
 		    } unless exists $jsn {$pr} ;
 ATTR
 		}
