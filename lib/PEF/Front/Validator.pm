@@ -241,7 +241,7 @@ ATTR
 				if(ref \$\@ and 'HASH' eq ref \$\@ and exists \$\@->{answer}) {
 					my \$response = {
 						result => 'BADPARAM',
-						\%\$\@
+						\%{\$\@}
 					};
 					cfg_log_level_info()
 					&& $def {request}->logger->({
