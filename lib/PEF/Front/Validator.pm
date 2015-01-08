@@ -237,66 +237,47 @@ ATTR
 				$filter_sub .= <<ATTR;
 		if(exists $jsn {$pr}) {
 			eval { $jsn {$pr} = $fcall };
-ATTR
-				if (exists ($mr->{optional}) && $mr->{optional}) {
-					$filter_sub .= <<ATTR;
-			if(\$@) {
-				if(ref \$@ and 'HASH' eq ref \$@ and exists \$@->{answer}) {
+			if(\$\@) {
+				if(ref \$\@ and 'HASH' eq ref \$\@ and exists \$\@->{answer}) {
 					my \$response = {
 						result => 'BADPARAM',
-						answer => \$@->{answer}
+						\%\$\@
 					};
-					\$response->{result} = \$@->{result} if exists \$@->{result};
-					\$response->{answer_args} = \$@->{answer_args} if exists \$@->{answer_args};
 					cfg_log_level_info()
 					&& $def {request}->logger->({
 						level => "info", 
-						message => "parameter $pr was not validate by input filter: " . Dumper(\$@)
+						message => "parameter $pr was not validate by input filter: " . Dumper(\$\@)
 					});
 					croak \$response;
 				} else {
+ATTR
+				if (exists ($mr->{optional}) && $mr->{optional}) {
+					$filter_sub .= <<ATTR;
 					delete $jsn {$pr}; 
 					cfg_log_level_info()
 					&& $def {request}->logger->({
 						level => "info", 
-						message => "dropped optional parameter $pr: input filter: " . Dumper(\$@)
+						message => "dropped optional parameter $pr: input filter: " . Dumper(\$\@)
 					});
-				}
-			}
 ATTR
 				} else {
 					$filter_sub .= <<ATTR;
-			if(\$@) {
-				if(ref \$@ and 'HASH' eq ref \$@ and exists \$@->{answer}) {
-					my \$response = {
-						result => 'BADPARAM',
-						answer => \$@->{answer}
-					};
-					\$response->{result} = \$@->{result} if exists \$@->{result};
-					\$response->{answer_args} = \$@->{answer_args} if exists \$@->{answer_args};
-					cfg_log_level_info()
-					&& $def {request}->logger->({
-						level => "info", 
-						message => "parameter $pr was not validate by input filter: " . Dumper(\$@)
-					});
-					croak \$response;
-				} else {
 					cfg_log_level_error()
 					&& $def {request}->logger->({
 						level => "error", 
-						message => "input filter: " . Dumper(\$@)
+						message => "input filter: " . Dumper(\$\@)
 					});
 					croak {
 						result => 'BADPARAM', 
 						answer => 'Bad parameter \$1', 
 						answer_args => ['$pr']
 					};
-				}
-			}
 ATTR
 
 				}
 				$filter_sub .= <<ATTR;
+				}
+			}
 		}
 ATTR
 				my $cl = cfg_app_namespace . "InFilter::$mr->{filter}";
@@ -555,9 +536,9 @@ sub _make_rules_parser {
 				$sub_int .= "\teval {$full_func(\$response, \$defaults)};\n";
 			}
 			$sub_int .= <<MRP;
-			if (\$@) {
+			if (\$\@) {
 				cfg_log_level_error()
-				&& \$logger->({level => "error", message => "output filter: " . Dumper(\$@)});
+				&& \$logger->({level => "error", message => "output filter: " . Dumper(\$\@)});
 				\$response = {result => 'INTERR', answer => 'Bad output filter'};
 				return;
 			}
