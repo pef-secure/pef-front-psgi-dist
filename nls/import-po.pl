@@ -74,8 +74,7 @@ $language = $header_lines{Language}
 db_connect;
 my $nls_lang = $conn->run(
 	sub {
-		$_->selectrow_hashref('select * from nls_lang where name = ?', undef,
-			$language);
+		$_->selectrow_hashref('select * from nls_lang where name = ?', undef, $language);
 	}
 ) or die "unknown nls_lang";
 
@@ -130,8 +129,7 @@ for my $msg (@$aref) {
 			my ($where, @bind) = $abs_where->where($cond);
 			$conn->run(
 				sub {
-					$_->do('update nls_msgid set msgid_plural = ? ' . $where, undef, $plural,
-						@bind);
+					$_->do('update nls_msgid set msgid_plural = ? ' . $where, undef, $plural, @bind);
 				}
 			);
 		}
@@ -152,9 +150,14 @@ for my $msg (@$aref) {
 	} elsif ($msg->msgstr_n && %{$msg->msgstr_n}) {
 		my $hrf = $msg->msgstr_n;
 		$msgstr = [];
-		my %msgh = %{$msg->msgstr_n};
+		my %msgh           = %{$msg->msgstr_n};
+		my $have_non_empty = 0;
 		for my $km (keys %msgh) {
 			$msgstr->[$km] = Locale::PO->dequote(decode_utf8 $msgh{$km});
+			$have_non_empty = 1 if $msgstr->[$km] ne '';
+		}
+		if (!$have_non_empty) {
+			$msgstr = [$nls_msgid->{msgid}, $plural];
 		}
 	} else {
 		$msgstr = [$nls_msgid->{msgid}];
@@ -167,7 +170,8 @@ for my $msg (@$aref) {
 					sub {
 						$_->do(
 							'update nls_message set message_json = ? where id_nls_msgid = ? and short = ?',
-							undef, to_json($msgstr), $nls_msgid->{id_nls_msgid}, $nls_lang->{short}
+							undef, to_json($msgstr), $nls_msgid->{id_nls_msgid},
+							$nls_lang->{short}
 						);
 					}
 				);
@@ -188,5 +192,4 @@ for my $msg (@$aref) {
 	}
 }
 
-print
-  "Updated $language; updated $updated records; inserted $inserted new records\n";
+print "Updated $language; updated $updated records; inserted $inserted new records\n";
