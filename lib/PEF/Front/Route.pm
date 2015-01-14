@@ -162,7 +162,6 @@ sub prepare_defaults {
 		$lang = PEF::Front::NLS::guess_lang($request);
 	}
 	if (($src eq 'get' || $src eq 'app') && $params ne '') {
-		$src = 'submit';
 		my @params = split /\//, $params;
 		my $i = 1;
 		for my $pv (@params) {

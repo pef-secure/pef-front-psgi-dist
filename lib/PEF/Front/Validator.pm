@@ -509,12 +509,12 @@ sub _make_rules_parser {
 		} elsif ($cmd eq 'add-header') {
 			for my $h (keys %{$start->{$cmd}}) {
 				my $value = make_value_parser($start->{$cmd}{$h});
-				$sub_int .= "\t\$http_response->add_header(~ . _quote_var($h) . qq~, $value);\n";
+				$sub_int .= "\t\$http_response->add_header(" . _quote_var($h) . ", $value);\n";
 			}
 		} elsif ($cmd eq 'set-header') {
 			for my $h (keys %{$start->{$cmd}}) {
 				my $value = make_value_parser($start->{$cmd}{$h});
-				$sub_int .= "\t\$http_response->set_header(~ . _quote_var($h) . qq~, $value);\n";
+				$sub_int .= "\t\$http_response->set_header(" . _quote_var($h) . ", $value);\n";
 			}
 		} elsif ($cmd eq 'filter') {
 			my $full_func;
@@ -544,7 +544,7 @@ sub _make_rules_parser {
 			}
 MRP
 		} elsif ($cmd eq 'answer') {
-			$sub_int .= qq~\t\$response->{answer} = ~ . make_value_parser($start->{$cmd}) . qq~;\n~;
+			$sub_int .= "\t\$response->{answer} = " . make_value_parser($start->{$cmd}) . ";\n";
 		}
 	}
 	$sub_int .= "\t}";
