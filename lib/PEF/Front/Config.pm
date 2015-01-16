@@ -57,6 +57,9 @@ my @std_const_params = qw{
   cfg_log_level_info
   cfg_log_level_error
   cfg_log_level_debug
+  cfg_session_db_file
+  cfg_session_refresh_time
+  cfg_session_request_field
 };
 
 my @std_var_params = qw{
@@ -140,6 +143,9 @@ sub std_db_name                      { "pef" }
 sub std_log_level_info               { 1 }
 sub std_log_level_error              { 1 }
 sub std_log_level_debug              { 0 }
+sub std_session_db_file              { cfg_project_dir() . "/var/cache/session.db" }
+sub std_session_refresh_time         { 86400 * 30 }
+sub std_session_request_field        { 'auth' }
 sub std_cookie_unset_negative_expire { -3600 }
 
 sub std_www_static_captchas_path {
