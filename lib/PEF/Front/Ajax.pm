@@ -28,6 +28,7 @@ sub ajax {
 	my $vreq = eval { validate(\%request, $defaults) };
 	my $response;
 	my $json = $src eq 'ajax';
+	$src = 'submit' if $src eq 'get';
 	my $new_loc;
 
 	if (!$@) {
@@ -39,8 +40,7 @@ sub ajax {
 		{
 			cfg_log_level_error
 			  && $logger->({level => "error", message => "not allowed source $src"});
-			$response =
-			  {result => 'INTERR', answer => 'Unallowed calling source', answer_args => []};
+			$response = {result => 'INTERR', answer => 'Unallowed calling source', answer_args => []};
 			goto out;
 		}
 		my $cache_attr = get_method_attrs($vreq => 'cache');
@@ -74,8 +74,7 @@ sub ajax {
 			}
 			if ($@) {
 				cfg_log_level_error
-				  && $logger->(
-					{level => "error", message => "error: " . Dumper($model, $@, $vreq)});
+				  && $logger->({level => "error", message => "error: " . Dumper($model, $@, $vreq)});
 				$response = {result => 'INTERR', answer => 'Internal error', answer_args => []};
 				goto out;
 			}
@@ -101,13 +100,11 @@ sub ajax {
 			$stash->{uri_unescape} = sub { uri_unescape @_ };
 			my $err;
 			($new_loc, $response) =
-			  get_method_attrs($vreq => 'result_sub')
-			  ->($response, $defaults, $stash, $http_response, $tt, $logger);
+			  get_method_attrs($vreq => 'result_sub')->($response, $defaults, $stash, $http_response, $tt, $logger);
 		}
 	} else {
 		cfg_log_level_error
-		  && $logger->(
-			{level => "error", message => "validate error: " . Dumper($@, \%request)});
+		  && $logger->({level => "error", message => "validate error: " . Dumper($@, \%request)});
 		$response = (
 			ref ($@) eq 'HASH'
 			? $@
@@ -126,8 +123,7 @@ sub ajax {
 				}
 				shift @{$response->{answer_headers}};
 			} else {
-				$http_response->add_header($response->{answer_headers}[0],
-					$response->{answer_headers}[1]);
+				$http_response->add_header($response->{answer_headers}[0], $response->{answer_headers}[1]);
 				splice @{$response->{answer_headers}}, 0, 2;
 			}
 		}
@@ -144,8 +140,7 @@ sub ajax {
 				}
 				shift @{$response->{answer_cookies}};
 			} else {
-				$http_response->set_cookie($response->{answer_cookies}[0],
-					$response->{answer_cookies}[1]);
+				$http_response->set_cookie($response->{answer_cookies}[0], $response->{answer_cookies}[1]);
 				splice @{$response->{answer_cookies}}, 0, 2;
 			}
 		}
