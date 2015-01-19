@@ -56,16 +56,17 @@ sub _collect_base_rules {
 }
 
 sub _build_validator {
-	my $rules         = $_[0];
-	my $method_rules  = $rules->{params} || {};
-	my $params_rule   = $rules->{extra_params} || 'ignore';
-	my %known_params  = (method => undef, ip => undef);
-	my %must_params   = (method => undef);
-	my $validator_sub = "sub { \n";
-	my $jsn           = '$_[0]->';
-	my $def           = '$_[1]->';
+	my $rules             = $_[0];
+	my $method_params     = $rules->{params} || {};
+	my $extra_params_rule = $rules->{extra_params} || 'ignore';
+	my %known_params      = (method => undef, ip => undef);
+	my %must_params       = (method => undef);
+	my $validator_sub     = "sub { \n";
+	my $jsn               = '$_[0]->';
+	my $def               = '$_[1]->';
 	my $pr;
 	my $mr;
+	my $session_required = 0;
 	my $make_default_sub = sub {
 		my ($default) = @_;
 		my $check_defaults = '';
@@ -84,6 +85,13 @@ sub _build_validator {
 				$c              = _quote_var($c);
 				$default        = "$def {cookies}->{$c}";
 				$check_defaults = "exists($def {cookies}->{$c})";
+			} elsif ($default =~ /^session\.(.*)/) {
+				my $c = $1;
+				$c =~ s/\s*$//;
+				$c                = _quote_var($c);
+				$default          = "$def {session}->data->{$c}";
+				$check_defaults   = "exists($def {session}->data->{$c})";
+				$session_required = 1;
 			} elsif ($default =~ /^config\.(.*)/) {
 				my $c = $1;
 				$c =~ s/\s*$//;
@@ -313,9 +321,14 @@ ATTR
 		}
 	);
 	$attr_sub{can_string} = $attr_sub{can};
-	for my $par (keys %$method_rules) {
+	my @validator_checks;
+	for my $par (
+		sort { $a eq cfg_session_request_field() ? -1 : $b eq cfg_session_request_field() ? 1 : $a cmp $b }
+		keys %$method_params
+	  )
+	{
 		$pr = $par;
-		$mr = $method_rules->{$pr};
+		$mr = $method_params->{$pr};
 		$mr = '' if not defined $mr;
 		my $last_sym = substr ($pr, -1, 1);
 		if ($last_sym eq '%' || $last_sym eq '@' || $last_sym eq '*') {
@@ -346,12 +359,13 @@ ATTR
 				$mr = {regex => $mr};
 			}
 		}
-		my $sub_test = '';
+		my $sub_test       = '';
+		my $validator_test = '';
 		for my $attr (sort { $a eq 'filter' ? 1 : $b eq 'filter' ? -1 : $a cmp $b } keys %$mr) {
 			substr ($attr, 0, 1, '') if substr ($attr, 0, 1) eq '^';
 			if (exists ($attr_sub{$attr})) {
 				if ($attr eq 'default' || $attr eq 'value') {
-					$validator_sub .= $attr_sub{$attr}();
+					$validator_test .= $attr_sub{$attr}();
 				} else {
 					$sub_test .= $attr_sub{$attr}();
 				}
@@ -364,21 +378,21 @@ ATTR
 			}
 		}
 		if (exists ($mr->{optional}) && $mr->{optional} eq 'empty') {
-			$validator_sub .= <<ATTR;
+			$validator_test .= <<ATTR;
 			if(exists($jsn {$pr}) and $jsn {$pr} ne '') {
 $sub_test
 			}
 ATTR
 		} elsif (exists ($mr->{optional}) && $mr->{optional}) {
-			$validator_sub .= <<ATTR;
+			$validator_test .= <<ATTR;
 			if(exists($jsn {$pr})) {
 $sub_test
 			}
 ATTR
 		} else {
 			$must_params{$pr} = undef;
-			$validator_sub .= $sub_test;
-			$validator_sub .= <<ATTR
+			$validator_test .= $sub_test;
+			$validator_test .= <<ATTR
 		    croak {
 		    	result => 'BADPARAM', 
 		    	answer => 'Mandatory parameter \$1 is absent', 
@@ -386,19 +400,27 @@ ATTR
 		    } unless exists $jsn {$pr} ;
 ATTR
 		}
+		push @validator_checks, $validator_test;
 	}
-	if ($params_rule ne 'pass') {
+	if ($session_required && @validator_checks) {
+		my $session_load = <<SESSION;
+		$def {session} = PEF::Front::Session->new(\$_[0]);
+SESSION
+		splice @validator_checks, 1, 0, $session_load;
+	}
+	$validator_sub = join "", @validator_checks;
+	if ($extra_params_rule ne 'pass') {
 		my $known_params_list = join ", ", map { _quote_var($_) . " => undef" } keys %known_params;
 		$validator_sub .= <<PARAM;
 		    {
 				my \%known_params = ($known_params_list);
 				for my \$pr(keys \%{\$_[0]}) {
 PARAM
-		if ($params_rule eq 'ignore') {
+		if ($extra_params_rule eq 'ignore') {
 			$validator_sub .= <<PARAM;
 					delete $jsn {\$pr} if !exists(\$known_params {\$pr});
 PARAM
-		} elsif ($params_rule eq 'disallow') {
+		} elsif ($extra_params_rule eq 'disallow') {
 			$validator_sub .= <<PARAM;
 					croak {
 						result => 'BADPARAM', 

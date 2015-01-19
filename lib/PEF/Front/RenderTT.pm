@@ -215,6 +215,17 @@ sub handler {
 			return;
 		}
 	);
+	$tt->define_vmethod(
+		'text',
+		session => sub {
+			$defaults->{session} ||= PEF::Front::Session->new($request);
+			if(@_) {
+				return $defaults->{session}->data->{$_[0]};
+			} else {
+				return $defaults->{session}->data;
+			}
+		}
+	);
 	$http_response->content_type('text/html; charset=utf-8');
 	$http_response->set_body('');
 	return sub {
