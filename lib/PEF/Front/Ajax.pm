@@ -98,6 +98,17 @@ sub ajax {
 				ENCODING    => "UTF-8"
 			);
 			$stash->{uri_unescape} = sub { uri_unescape @_ };
+			$tt->define_vmethod(
+				'text',
+				session => sub {
+					$defaults->{session} ||= PEF::Front::Session->new($request);
+					if (@_) {
+						return $defaults->{session}->data->{$_[0]};
+					} else {
+						return $defaults->{session}->data;
+					}
+				}
+			);
 			my $err;
 			($new_loc, $response) =
 			  get_method_attrs($vreq => 'result_sub')->($response, $defaults, $stash, $http_response, $tt, $logger);
