@@ -61,7 +61,6 @@ sub _build_validator {
 	my $extra_params_rule = $rules->{extra_params} || 'ignore';
 	my %known_params      = (method => undef, ip => undef);
 	my %must_params       = (method => undef);
-	my $validator_sub     = "sub { \n";
 	my $jsn               = '$_[0]->';
 	my $def               = '$_[1]->';
 	my $pr;
@@ -408,7 +407,8 @@ ATTR
 SESSION
 		splice @validator_checks, 1, 0, $session_load;
 	}
-	$validator_sub = join "", @validator_checks;
+	my $validator_sub = "sub { \n";
+	$validator_sub .= join "", @validator_checks;
 	if ($extra_params_rule ne 'pass') {
 		my $known_params_list = join ", ", map { _quote_var($_) . " => undef" } keys %known_params;
 		$validator_sub .= <<PARAM;
