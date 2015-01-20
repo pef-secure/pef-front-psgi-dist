@@ -48,7 +48,7 @@ sub exchange_code_to_token {
 					client_secret => cfg_oauth_client_secret($self->{service})
 				]
 			);
-			die if !$response or $response->is_error;
+			die if !$response or !$response->decoded_content;
 			$token_answer = decode_json $response->decoded_content;
 		};
 		alarm 0;
@@ -84,6 +84,9 @@ sub _get_user_info_request {
 	die 'unimplemented base method';
 }
 
+sub _parse_user_info {
+	die 'unimplemented base method';
+}
 sub get_user_info {
 	my ($self) = @_;
 	my $info;
@@ -91,7 +94,7 @@ sub get_user_info {
 		local $SIG{ALRM} = sub { die "timeout" };
 		alarm cfg_oauth_connect_timeout();
 		my $response = LWP::UserAgent->new->request->($self->_get_user_info_request);
-		die if !$response or $response->is_error;
+		die if !$response or !$response->decoded_content;
 		$info = decode_json $response->decoded_content;
 	};
 	alarm 0;
@@ -112,7 +115,16 @@ sub get_user_info {
 			answer_args => [$info->{error_description}]
 		};
 	}
-	$self->{session}->data->{info}{$self->{service}} = $info;
+	$self->{session}->data->{oauth_info_raw}{$self->{service}} = $info;
+	$self->{session}->data->{oauth_info} = [] if !$self->{session}->data->{oauth_info};
+	my $oi = $self->{session}->data->{oauth_info};
+	for (my $i = 0 ; $i < @$oi ; ++$i) {
+		if ($oi->[$i]->{service} eq $self->{service}) {
+			splice @$oi, $i, 1;
+			last;
+		}
+	}
+	unshift @$oi, $self->_parse_user_info;
 }
 
 sub new {
