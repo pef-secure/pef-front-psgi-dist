@@ -17,12 +17,13 @@ sub _token_server {
 }
 
 sub authorization_server {
-	my ($self) = @_;
+	my ($self, $extra) = @_;
+	$extra ||= '';
 	my $uri = URI->new($self->_authorization_server);
 	$uri->query_form(
 		response_type => 'code',
 		client_id     => cfg_oauth_client_id($self->{service}),
-		state         => $self->{state}
+		state         => $self->{state} . $extra
 	);
 	$uri->as_string;
 }
