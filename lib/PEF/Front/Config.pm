@@ -4,6 +4,7 @@ use strict;
 use FindBin;
 use File::Basename;
 use PEF::Front::RPC;
+use feature 'state';
 our $project_dir;
 our $app_conf_dir;
 our $app_namespace;
@@ -60,11 +61,14 @@ my @std_const_params = qw{
   cfg_session_db_file
   cfg_session_ttl
   cfg_session_request_field
+  cfg_oauth_connect_timeout
 };
 
 my @std_var_params = qw{
   cfg_template_dir
   cfg_model_rpc
+  cfg_oauth_client_id
+  cfg_oauth_client_secret
 };
 
 our %config_export;
@@ -147,6 +151,7 @@ sub std_session_db_file              { cfg_project_dir() . "/var/cache/session.d
 sub std_session_ttl                  { 86400 * 30 }
 sub std_session_request_field        { 'auth' }
 sub std_cookie_unset_negative_expire { -3600 }
+sub std_oauth_connect_timeout        { 15 }
 
 sub std_www_static_captchas_path {
 	if (substr (cfg_www_static_captchas_dir(), 0, length (cfg_www_static_dir())) eq cfg_www_static_dir()) {
@@ -176,6 +181,16 @@ sub std_model_rpc {
 			'Port' => cfg_model_rpc_site_port(),
 		);
 	}
+}
+
+sub std_oauth_client_id {
+	state $ids = {yandex => 'anonymous'};
+	$ids->{$_[0]};
+}
+
+sub std_oauth_client_secret {
+	state $secrets = {yandex => 'anonymous_secret'};
+	$secrets->{$_[0]};
 }
 
 sub cfg {
