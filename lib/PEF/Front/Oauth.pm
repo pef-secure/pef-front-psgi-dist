@@ -37,6 +37,7 @@ sub exchange_code_to_token {
 			};
 		}
 		my $token_answer;
+		$self->{session}->store;
 		eval {
 			local $SIG{ALRM} = sub { die "timeout" };
 			alarm cfg_oauth_connect_timeout();
@@ -69,7 +70,9 @@ sub exchange_code_to_token {
 				answer_args => [$token_answer->{error_description} || 'no access token']
 			};
 		}
+		$self->{session}->load;
 		$self->{session}->data->{oauth_access_token}{$self->{service}} = $token_answer->{access_token};
+		$self->{session}->store;
 	} else {
 		my $message = $request->{error_description} || 'Internal Oauth error';
 		die {
@@ -87,9 +90,11 @@ sub _get_user_info_request {
 sub _parse_user_info {
 	die 'unimplemented base method';
 }
+
 sub get_user_info {
 	my ($self) = @_;
 	my $info;
+	$self->{session}->store;
 	eval {
 		local $SIG{ALRM} = sub { die "timeout" };
 		alarm cfg_oauth_connect_timeout();
@@ -115,6 +120,7 @@ sub get_user_info {
 			answer_args => [$info->{error_description}]
 		};
 	}
+	$self->{session}->load;
 	$self->{session}->data->{oauth_info_raw}{$self->{service}} = $info;
 	$self->{session}->data->{oauth_info} = [] if !$self->{session}->data->{oauth_info};
 	my $oi = $self->{session}->data->{oauth_info};
@@ -125,10 +131,12 @@ sub get_user_info {
 		}
 	}
 	unshift @$oi, $self->_parse_user_info;
+	$self->{session}->store;
+	$oi->[0];
 }
 
-sub new {
-	my ($class, $auth_service, $session) = @_;
+sub _load_module {
+	my ($auth_service) = @_;
 	my $module = $auth_service;
 	$module =~ s/[-_]([[:lower:]])/\u$1/g;
 	$module = ucfirst ($module);
@@ -141,7 +149,13 @@ sub new {
 			answer_args => [$auth_service]
 		};
 	}
-	"PEF::Front::Oauth::$module"->new(
+	return "PEF::Front::Oauth::$module";
+}
+
+sub new {
+	my ($class, $auth_service, $session) = @_;
+	my $module = _load_module($auth_service);
+	$module->new(
 		{   state   => $session->key,
 			session => $session,
 			service => $auth_service,

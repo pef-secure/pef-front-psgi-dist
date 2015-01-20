@@ -27,25 +27,25 @@ sub _get_user_info_request {
 sub _parse_user_info {
 	my ($self) = @_;
 	state $sizes = [
-		qw{
-		  islands-small
-		  islands-34
-		  islands-middle
-		  islands-50
-		  islands-retina-small
-		  islands-68
-		  islands-75
-		  islands-retina-middle
-		  islands-retina-50
-		  islands-200
-		  }
+		'islands-small'         => 28,
+		'islands-34'            => 34,
+		'islands-middle'        => 42,
+		'islands-50'            => 50,
+		'islands-retina-small'  => 56,
+		'islands-68'            => 68,
+		'islands-75'            => 75,
+		'islands-retina-middle' => 84,
+		'islands-retina-50'     => 100,
+		'islands-200'           => 200
 	];
 	my $info = $self->{session}->data->{oauth_info_raw}{$self->{service}};
 	my @avatar;
 	if ($info->{default_avatar_id}) {
-		for my $size (@$sizes) {
+		for (my $i = 0 ; $i < @$sizes ; $i += 2) {
+			my $sn   = $sizes->[$i];
+			my $size = $sizes->[$i + 1];
 			push @avatar,
-			  { url  => "https://avatars.yandex.net/get-yapic/$info->{default_avatar_id}/$size",
+			  { url  => "https://avatars.yandex.net/get-yapic/$info->{default_avatar_id}/$sn",
 				size => $size
 			  };
 		}
