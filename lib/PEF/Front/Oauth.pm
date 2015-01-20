@@ -135,7 +135,7 @@ sub get_user_info {
 	$oi->[0];
 }
 
-sub _load_module {
+sub load_module {
 	my ($auth_service) = @_;
 	my $module = $auth_service;
 	$module =~ s/[-_]([[:lower:]])/\u$1/g;
@@ -154,7 +154,7 @@ sub _load_module {
 
 sub new {
 	my ($class, $auth_service, $session) = @_;
-	my $module = _load_module($auth_service);
+	my $module = load_module($auth_service);
 	$module->new(
 		{   state   => $session->key,
 			session => $session,
