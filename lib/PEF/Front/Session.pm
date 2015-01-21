@@ -16,6 +16,11 @@ sub _secure_value {
 	return sha1_hex($buf);
 }
 
+sub _key ()     { 0 }
+sub _session () { 1 }
+sub _expires () { 0 }
+sub _data ()    { 1 }
+
 sub new {
 	my ($class, $request) = @_;
 	my $key = (
@@ -24,30 +29,22 @@ sub new {
 		:                     $request
 	);
 	$key ||= _secure_value;
-	my $self = bless {
-		key     => $key,
-		session => [time + cfg_session_ttl, {}]
-	  },
-	  $class;
+	my $self = bless [$key, [time + cfg_session_ttl, {}]], $class;
 	$self->load;
 	$self;
 }
 
 sub load {
 	my ($self, $key) = @_;
-	if (defined ($key)) {
-		$self->{key} = $key;
-	}
 	my %session_db;
 	my $sobj = tie (%session_db, 'MLDBM::Sync', cfg_session_db_file, O_CREAT | O_RDWR, 0660) or die "$!";
 	$sobj->Lock;
-	my $session = $session_db{$self->{key}};
-	if ($session && $session->[0] > time) {
-		$self->{session}          = $session;
-		$session->[0]             = time + cfg_session_ttl;
-		$session_db{$self->{key}} = $session;
+	my $session = $session_db{$self->[_key]};
+	if ($session && $session->[_expires] > time) {
+		$self->[_session]    = $session;
+		$session->[_expires] = time + cfg_session_ttl;
 	} else {
-		delete $session_db{$self->{key}};
+		delete $session_db{$self->[_key]};
 	}
 	$sobj->UnLock;
 }
@@ -55,36 +52,33 @@ sub load {
 sub store {
 	my $self = $_[0];
 	tie (my %session_db, 'MLDBM::Sync', cfg_session_db_file, O_CREAT | O_RDWR, 0660) or die "$!";
-	$self->{session}->[0] = time + cfg_session_ttl;
-	$session_db{$self->{key}} = $self->{session};
+	$self->[_session][_expires] = time + cfg_session_ttl;
+	$session_db{$self->[_key]} = $self->[_session];
 }
 
 sub destroy {
 	my $self = $_[0];
-	$self->{session}->[0] = 0;
+	$self->[_session][_expires] = 0;
 	tie (my %session_db, 'MLDBM::Sync', cfg_session_db_file, O_CREAT | O_RDWR, 0660) or die "$!";
-	delete $session_db{$self->{key}};
+	delete $session_db{$self->[_key]};
 }
 
 sub data {
 	my ($self, $data) = @_;
 	if (defined ($data)) {
-		$self->{session}->[1] = $data;
+		$self->[_session][_data] = $data;
 	}
-	$self->{session}->[1];
+	$self->[_session][_data];
 }
 
 sub key {
-	my ($self, $key) = @_;
-	if (defined ($key)) {
-		$self->{key} = $key;
-	}
-	$self->{key};
+	my ($self) = @_;
+	$self->[_key];
 }
 
 sub DESTROY {
 	my $self = $_[0];
-	if ($self->{session}->[0] > time) {
+	if ($self->[_session][_expires] > time) {
 		$self->store;
 	} else {
 		$self->destroy;
