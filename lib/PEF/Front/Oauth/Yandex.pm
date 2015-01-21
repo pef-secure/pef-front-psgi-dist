@@ -50,11 +50,11 @@ sub _parse_user_info {
 			  };
 		}
 	}
-	my $name = $info->{display_name} || $info->{real_name};
+	my $name = $info->{display_name} || $info->{real_name} || '';
 	return {
 		name   => $name,
-		email  => $info->{default_email},
-		login  => $info->{login},
+		email  => $info->{default_email} || '',
+		login  => $info->{login} || '',
 		avatar => \@avatar,
 	};
 }

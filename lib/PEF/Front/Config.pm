@@ -69,6 +69,7 @@ my @std_var_params = qw{
   cfg_model_rpc
   cfg_oauth_client_id
   cfg_oauth_client_secret
+  cfg_oauth_scopes
 };
 
 our %config_export;
@@ -191,6 +192,11 @@ sub std_oauth_client_id {
 sub std_oauth_client_secret {
 	state $secrets = {yandex => 'anonymous_secret'};
 	$secrets->{$_[0]};
+}
+
+sub std_oauth_scopes {
+	state $scopes = {yandex => {user_info => undef}};
+	$scopes->{$_[0]};
 }
 
 sub cfg {

@@ -7,6 +7,7 @@ use LWP::UserAgent;
 use HTTP::Request::Common;
 use JSON;
 use PEF::Front::Config;
+use PEF::Front::Session;
 
 sub _authorization_server {
 	die 'unimplemented base method';
@@ -16,14 +17,31 @@ sub _token_server {
 	die 'unimplemented base method';
 }
 
+sub _get_user_info_request {
+	die 'unimplemented base method';
+}
+
+sub _parse_user_info {
+	die 'unimplemented base method';
+}
+
+sub user_info_scope {
+	my ($self) = @_;
+	cfg_oauth_scopes($self->{service})->{user_info};
+}
+
 sub authorization_server {
-	my ($self, $extra) = @_;
-	$extra ||= '';
-	my $uri = URI->new($self->_authorization_server);
+	my ($self, $scope) = @_;
+	my $uri   = URI->new($self->_authorization_server);
+	my @scope = ();
+	if (defined $scope) {
+		@scope = (scope => $scope);
+	}
 	$uri->query_form(
 		response_type => 'code',
 		client_id     => cfg_oauth_client_id($self->{service}),
-		state         => $self->{state} . $extra
+		state         => $self->{state},
+		@scope
 	);
 	$uri->as_string;
 }
@@ -31,13 +49,8 @@ sub authorization_server {
 sub exchange_code_to_token {
 	my ($self, $request) = @_;
 	if ($request->{code}) {
-		if ($request->{state} ne $self->{state}) {
-			die {
-				result => 'OAUTHERR',
-				answer => 'Unknown Oauth session'
-			};
-		}
 		my $token_answer;
+		delete $self->{session}->data->{oauth_state};
 		$self->{session}->store;
 		eval {
 			local $SIG{ALRM} = sub { die "timeout" };
@@ -84,14 +97,6 @@ sub exchange_code_to_token {
 
 }
 
-sub _get_user_info_request {
-	die 'unimplemented base method';
-}
-
-sub _parse_user_info {
-	die 'unimplemented base method';
-}
-
 sub get_user_info {
 	my ($self) = @_;
 	my $info;
@@ -131,9 +136,10 @@ sub get_user_info {
 			last;
 		}
 	}
-	unshift @$oi, $self->_parse_user_info;
+	my $parsed_info = $self->_parse_user_info;
+	unshift @$oi, $parsed_info;
 	$self->{session}->store;
-	$oi->[0];
+	$parsed_info;
 }
 
 sub load_module {
@@ -156,8 +162,10 @@ sub load_module {
 sub new {
 	my ($class, $auth_service, $session) = @_;
 	my $module = load_module($auth_service);
+	my $state  = PEF::Front::Session::_secure_value;
+	$session->data->{oauth_state}{$state} = $auth_service;
 	$module->new(
-		{   state   => $session->key,
+		{   state   => $state,
 			session => $session,
 			service => $auth_service,
 		}
