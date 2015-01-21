@@ -17,7 +17,7 @@ sub _token_server {
 sub _get_user_info_request {
 	my ($self) = @_;
 	my $req = GET 'https://login.yandex.ru/info';
-	$req->query_form(
+	$req->uri->query_form(
 		format      => 'json',
 		oauth_token => $self->{session}->data->{oauth_access_token}{$self->{service}}
 	);
