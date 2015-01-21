@@ -24,9 +24,10 @@ sub _data ()    { 1 }
 sub new {
 	my ($class, $request) = @_;
 	my $key = (
-		  blessed($request) ? $request->param(cfg_session_request_field())
-		: ref ($request)    ? $request->{cfg_session_request_field()}
-		:                     $request
+		blessed($request) ? $request->param(cfg_session_request_field())
+		  || $request->cookies->{cfg_session_request_field()}
+		: ref ($request) ? $request->{cfg_session_request_field()}
+		:                  $request
 	);
 	$key ||= _secure_value;
 	my $self = bless [$key, [time + cfg_session_ttl, {}]], $class;
