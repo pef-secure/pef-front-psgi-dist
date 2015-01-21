@@ -145,6 +145,7 @@ sub get_user_info {
 		}
 	}
 	my $parsed_info = $self->_parse_user_info;
+	$parsed_info->{service} = $self->{service};
 	unshift @$oi, $parsed_info;
 	$self->{session}->store;
 	$parsed_info;
