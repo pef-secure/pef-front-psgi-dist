@@ -32,8 +32,8 @@ sub user_info_scope {
 
 sub authorization_server {
 	my ($self, $scope) = @_;
-	my $uri   = URI->new($self->_authorization_server);
-	$self->{state}  = PEF::Front::Session::_secure_value;
+	my $uri = URI->new($self->_authorization_server);
+	$self->{state} = PEF::Front::Session::_secure_value;
 	$self->{session}->data->{oauth_state}{$self->{state}} = $self->{service};
 	my @scope = ();
 	if (defined $scope) {
@@ -70,24 +70,26 @@ sub exchange_code_to_token {
 		};
 		alarm 0;
 		if ($@) {
+			$self->{session}->data->{oauth_error} = $@;
 			die {
 				result => 'OAUTHERR',
 				answer => 'Oauth timeout'
 			} if $@ =~ /timeout/;
-			print STDERR $@;
 			die {
 				result => 'OAUTHERR',
 				answer => 'Oauth connect error'
 			};
 		}
 		if ($token_answer->{error} || !$token_answer->{access_token}) {
+			$self->{session}->data->{oauth_error} = $token_answer->{error_description} || 'no access token';
 			die {
 				result      => 'OAUTHERR',
 				answer      => 'Oauth error: $1',
-				answer_args => [$token_answer->{error_description} || 'no access token']
+				answer_args => [$self->{session}->data->{oauth_error}]
 			};
 		}
 		$self->{session}->load;
+		delete $self->{session}->data->{oauth_error};
 		$self->{session}->data->{oauth_access_token}{$self->{service}} = $token_answer->{access_token};
 		$self->{session}->store;
 	} else {
@@ -113,6 +115,7 @@ sub get_user_info {
 	};
 	alarm 0;
 	if ($@) {
+		$self->{session}->data->{oauth_error} = $@;
 		die {
 			result => 'OAUTHERR',
 			answer => 'Oauth timeout'
@@ -123,6 +126,7 @@ sub get_user_info {
 		};
 	}
 	if ($info->{error}) {
+		$self->{session}->data->{oauth_error} = $info->{error_description};
 		die {
 			result      => 'OAUTHERR',
 			answer      => 'Oauth error: $1',
@@ -130,6 +134,7 @@ sub get_user_info {
 		};
 	}
 	$self->{session}->load;
+	delete $self->{session}->data->{oauth_error};
 	$self->{session}->data->{oauth_info_raw}{$self->{service}} = $info;
 	$self->{session}->data->{oauth_info} = [] if !$self->{session}->data->{oauth_info};
 	my $oi = $self->{session}->data->{oauth_info};
@@ -166,8 +171,7 @@ sub new {
 	my ($class, $auth_service, $session) = @_;
 	my $module = load_module($auth_service);
 	$module->new(
-		{
-			session => $session,
+		{   session => $session,
 			service => $auth_service,
 		}
 	);
