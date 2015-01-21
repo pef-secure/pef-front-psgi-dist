@@ -81,7 +81,8 @@ sub exchange_code_to_token {
 			};
 		}
 		if ($token_answer->{error} || !$token_answer->{access_token}) {
-			$self->{session}->data->{oauth_error} = $token_answer->{error_description} || 'no access token';
+			$self->{session}->data->{oauth_error} =
+			  $token_answer->{error_description} || $token_answer->{error} || 'no access token';
 			die {
 				result      => 'OAUTHERR',
 				answer      => 'Oauth error: $1',
@@ -93,7 +94,7 @@ sub exchange_code_to_token {
 		$self->{session}->data->{oauth_access_token}{$self->{service}} = $token_answer->{access_token};
 		$self->{session}->store;
 	} else {
-		my $message = $request->{error_description} || 'Internal Oauth error';
+		my $message = $request->{error_description} || $request->{error} || 'Internal Oauth error';
 		die {
 			result => 'OAUTHERR',
 			answer => $message
@@ -126,11 +127,11 @@ sub get_user_info {
 		};
 	}
 	if ($info->{error}) {
-		$self->{session}->data->{oauth_error} = $info->{error_description};
+		$self->{session}->data->{oauth_error} = $info->{error_description} || $info->{error};
 		die {
 			result      => 'OAUTHERR',
 			answer      => 'Oauth error: $1',
-			answer_args => [$info->{error_description}]
+			answer_args => [$self->{session}->data->{oauth_error}]
 		};
 	}
 	$self->{session}->load;

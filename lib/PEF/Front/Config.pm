@@ -185,17 +185,25 @@ sub std_model_rpc {
 }
 
 sub std_oauth_client_id {
-	state $ids = {yandex => 'anonymous'};
+	state $ids = {
+		yandex => 'anonymous',
+		google => 'anonymous',
+	};
 	$ids->{$_[0]};
 }
 
 sub std_oauth_client_secret {
-	state $secrets = {yandex => 'anonymous_secret'};
+	state $secrets = {
+		yandex => 'anonymous_secret',
+		google => 'anonymous_secret'
+	};
 	$secrets->{$_[0]};
 }
-
 sub std_oauth_scopes {
-	state $scopes = {yandex => {user_info => undef}};
+	state $scopes = {
+		yandex => {user_info => undef},
+		google => {user_info => 'https://www.googleapis.com/auth/plus.login'},
+	};
 	$scopes->{$_[0]};
 }
 
