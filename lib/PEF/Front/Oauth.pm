@@ -33,6 +33,8 @@ sub user_info_scope {
 sub authorization_server {
 	my ($self, $scope) = @_;
 	my $uri   = URI->new($self->_authorization_server);
+	$self->{state}  = PEF::Front::Session::_secure_value;
+	$self->{session}->data->{oauth_state}{$self->{state}} = $self->{service};
 	my @scope = ();
 	if (defined $scope) {
 		@scope = (scope => $scope);
@@ -162,10 +164,8 @@ sub load_module {
 sub new {
 	my ($class, $auth_service, $session) = @_;
 	my $module = load_module($auth_service);
-	my $state  = PEF::Front::Session::_secure_value;
-	$session->data->{oauth_state}{$state} = $auth_service;
 	$module->new(
-		{   state   => $state,
+		{
 			session => $session,
 			service => $auth_service,
 		}
