@@ -57,7 +57,7 @@ sub exchange_code_to_token {
 		eval {
 			local $SIG{ALRM} = sub { die "timeout" };
 			alarm cfg_oauth_connect_timeout();
-			my $response = LWP::UserAgent->new->request->(
+			my $response = LWP::UserAgent->new->request(
 				POST $self->_token_server,
 				[   grant_type    => 'authorization_code',
 					code          => $request->{code},
@@ -107,7 +107,7 @@ sub get_user_info {
 	eval {
 		local $SIG{ALRM} = sub { die "timeout" };
 		alarm cfg_oauth_connect_timeout();
-		my $response = LWP::UserAgent->new->request->($self->_get_user_info_request);
+		my $response = LWP::UserAgent->new->request($self->_get_user_info_request);
 		die if !$response or !$response->decoded_content;
 		$info = decode_json $response->decoded_content;
 	};
