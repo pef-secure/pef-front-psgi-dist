@@ -74,6 +74,7 @@ sub exchange_code_to_token {
 				result => 'OAUTHERR',
 				answer => 'Oauth timeout'
 			} if $@ =~ /timeout/;
+			print STDERR $@;
 			die {
 				result => 'OAUTHERR',
 				answer => 'Oauth connect error'
