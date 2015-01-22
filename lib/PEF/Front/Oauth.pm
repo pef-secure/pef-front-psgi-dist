@@ -25,25 +25,39 @@ sub _parse_user_info {
 	die 'unimplemented base method';
 }
 
+sub _required_redirect_uri { 0 }
+
 sub user_info_scope {
 	my ($self) = @_;
 	cfg_oauth_scopes($self->{service})->{user_info};
 }
 
 sub authorization_server {
-	my ($self, $scope) = @_;
+	my ($self, $scope, $redirect_uri) = @_;
 	my $uri = URI->new($self->_authorization_server);
 	$self->{state} = PEF::Front::Session::_secure_value;
 	$self->{session}->data->{oauth_state}{$self->{state}} = $self->{service};
-	my @scope = ();
+	my @extra = ();
 	if (defined $scope) {
-		@scope = (scope => $scope);
+		@extra = (scope => $scope);
+	}
+	if (defined $redirect_uri) {
+		my $uri = URI->new($redirect_uri);
+		$uri->query_form($uri->query_form, state => $self->{state});
+		push @extra, (redirect_uri => $uri->as_string);
+	} elsif ($self->_required_redirect_uri) {
+		die {
+			result      => 'OAUTHERR',
+			answer      => 'Oauth $1 requires redirect_uri',
+			answer_args => [$self->{service}]
+		};
+	} else {
+		push @extra, (state => $self->{state});
 	}
 	$uri->query_form(
 		response_type => 'code',
 		client_id     => cfg_oauth_client_id($self->{service}),
-		state         => $self->{state},
-		@scope
+		@extra
 	);
 	$uri->as_string;
 }
@@ -165,6 +179,7 @@ sub load_module {
 sub new {
 	my ($class, $auth_service, $session) = @_;
 	my $module = load_module($auth_service);
+	$auth_service =~ tr/-/_/;
 	$module->new(
 		{   session => $session,
 			service => $auth_service,
