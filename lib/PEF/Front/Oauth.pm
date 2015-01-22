@@ -13,7 +13,7 @@ sub _authorization_server {
 	die 'unimplemented base method';
 }
 
-sub _token_server {
+sub _token_request {
 	die 'unimplemented base method';
 }
 
@@ -57,14 +57,7 @@ sub exchange_code_to_token {
 		eval {
 			local $SIG{ALRM} = sub { die "timeout" };
 			alarm cfg_oauth_connect_timeout();
-			my $response = LWP::UserAgent->new->request(
-				POST $self->_token_server,
-				[   grant_type    => 'authorization_code',
-					code          => $request->{code},
-					client_id     => cfg_oauth_client_id($self->{service}),
-					client_secret => cfg_oauth_client_secret($self->{service})
-				]
-			);
+			my $response = LWP::UserAgent->new->request($self->_token_request($request->{code}));
 			die if !$response or !$response->decoded_content;
 			$token_answer = decode_json $response->decoded_content;
 		};

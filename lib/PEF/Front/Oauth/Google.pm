@@ -5,13 +5,21 @@ use warnings;
 use base 'PEF::Front::Oauth';
 use HTTP::Request::Common;
 use feature 'state';
+use PEF::Front::Config;
 
 sub _authorization_server {
 	'https://accounts.google.com/o/oauth2/auth';
 }
 
-sub _token_server {
-	'https://accounts.google.com/o/oauth2/token';
+sub _token_request {
+	my ($self, $code) = @_;
+	POST 'https://accounts.google.com/o/oauth2/token',
+	  [ grant_type    => 'authorization_code',
+		code          => $code,
+		client_id     => cfg_oauth_client_id($self->{service}),
+		client_secret => cfg_oauth_client_secret($self->{service})
+	  ];
+
 }
 
 sub _get_user_info_request {
