@@ -11,7 +11,7 @@ sub _authorization_server {
 	'http://oauth.vk.com/authorize';
 }
 
-sub _required_redirect_uri {1}
+sub _required_redirect_uri { 1 }
 
 sub _token_request {
 	my ($self, $code) = @_;
@@ -19,7 +19,8 @@ sub _token_request {
 	$req->uri->query_form(
 		client_id     => cfg_oauth_client_id($self->{service}),
 		client_secret => cfg_oauth_client_secret($self->{service}),
-		code          => $code
+		code          => $code,
+		redirect_uri  => $self->{session}->data->{oauth_redirect_uri}{$self->{service}}
 	);
 }
 

@@ -190,6 +190,7 @@ sub std_oauth_client_id {
 		google     => 'anonymous',
 		facebook   => 'anonymous',
 		v_kontakte => 'anonymous',
+		git_hub    => 'anonymous',
 	};
 	$ids->{$_[0]};
 }
@@ -200,6 +201,7 @@ sub std_oauth_client_secret {
 		google     => 'anonymous_secret',
 		facebook   => 'anonymous_secret',
 		v_kontakte => 'anonymous_secret',
+		git_hub    => 'anonymous_secret',
 	};
 	$secrets->{$_[0]};
 }
@@ -210,6 +212,7 @@ sub std_oauth_scopes {
 		google     => {user_info => 'https://www.googleapis.com/auth/plus.login,email'},
 		facebook   => {user_info => 'public_profile,email'},
 		v_kontakte => {user_info => undef},
+		git_hub    => {user_info => 'user'},
 	};
 	$scopes->{$_[0]};
 }

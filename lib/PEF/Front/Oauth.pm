@@ -45,6 +45,7 @@ sub authorization_server {
 		my $uri = URI->new($redirect_uri);
 		$uri->query_form($uri->query_form, state => $self->{state});
 		push @extra, (redirect_uri => $uri->as_string);
+		$self->{session}->data->{oauth_redirect_uri}{$self->{service}} = $uri->as_string;
 	} elsif ($self->_required_redirect_uri) {
 		die {
 			result      => 'OAUTHERR',
@@ -75,13 +76,15 @@ sub exchange_code_to_token {
 			die if !$response or !$response->decoded_content;
 			$token_answer = decode_json $response->decoded_content;
 		};
+		my $exception = $@;
+		delete $self->{session}->data->{oauth_redirect_uri}{$self->{service}};
 		alarm 0;
-		if ($@) {
-			$self->{session}->data->{oauth_error} = $@;
+		if ($exception) {
+			$self->{session}->data->{oauth_error} = $exception;
 			die {
 				result => 'OAUTHERR',
 				answer => 'Oauth timeout'
-			} if $@ =~ /timeout/;
+			} if $exception =~ /timeout/;
 			die {
 				result => 'OAUTHERR',
 				answer => 'Oauth connect error'
