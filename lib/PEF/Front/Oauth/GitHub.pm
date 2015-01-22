@@ -13,12 +13,12 @@ sub _authorization_server {
 
 sub _token_request {
 	my ($self, $code) = @_;
-	POST 'https://github.com/login/oauth/access_token',
-	  Accept => 'application/json',
-	  [ code          => $code,
+	POST 'https://github.com/login/oauth/access_token', [
+		code          => $code,
 		client_id     => cfg_oauth_client_id($self->{service}),
 		client_secret => cfg_oauth_client_secret($self->{service})
-	  ];
+	  ],
+	  Accept => 'application/json';
 }
 
 sub _get_user_info_request {
