@@ -8,6 +8,7 @@ use HTTP::Request::Common;
 use JSON;
 use PEF::Front::Config;
 use PEF::Front::Session;
+use Data::Dumper;
 
 sub _authorization_server {
 	die 'unimplemented base method';
@@ -72,10 +73,10 @@ sub exchange_code_to_token {
 		eval {
 			local $SIG{ALRM} = sub { die "timeout" };
 			alarm cfg_oauth_connect_timeout();
-			my $response = LWP::UserAgent->new->request($self->_token_request($request->{code}));
+			my $request = $self->_token_request($request->{code});
+			my $response = LWP::UserAgent->new->request($request);
 			die if !$response or !$response->decoded_content;
-			print STDERR "***\n" . $response->decoded_content . "\n***\n";
-			print STDERR "***\n" . Dumper($response->request) . "\n***\n";
+			print STDERR "***\n" . Dumper($request) . "\n***\n";
 			$token_answer = decode_json $response->decoded_content;
 		};
 		my $exception = $@;
