@@ -29,7 +29,7 @@ sub _get_user_info_request {
 	$req->uri->query_form(
 		access_token => $self->{session}->data->{oauth_access_token}{$self->{service}},
 		uids         => $self->{session}->data->{oauth_info_raw}{$self->{service}}{user_id},
-		fields       => 'photo_id,first_name,last_name,nickname,screen_name'
+		fields       => 'photo_50,first_name,last_name,nickname,screen_name'
 	);
 	$req;
 }
@@ -38,7 +38,7 @@ sub _parse_user_info {
 	my ($self) = @_;
 	my $info   = $self->{session}->data->{oauth_info_raw}{$self->{service}};
 	my @avatar = ();
-	@avatar = ({url => $info->{photo_id}}) if $info->{photo_id};
+	@avatar = ({url => $info->{photo_50}}) if $info->{photo_50};
 	return {
 		name   => $info->{first_name} . ' ' . $info->{last_name},
 		email  => '',
