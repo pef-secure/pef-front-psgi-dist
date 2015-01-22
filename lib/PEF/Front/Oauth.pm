@@ -75,6 +75,7 @@ sub exchange_code_to_token {
 			my $response = LWP::UserAgent->new->request($self->_token_request($request->{code}));
 			die if !$response or !$response->decoded_content;
 			print STDERR "***\n" . $response->decoded_content . "\n***\n";
+			print STDERR "***\n" . Dumper($response->request) . "\n***\n";
 			$token_answer = decode_json $response->decoded_content;
 		};
 		my $exception = $@;
