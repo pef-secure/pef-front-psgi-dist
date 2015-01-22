@@ -8,7 +8,6 @@ use HTTP::Request::Common;
 use JSON;
 use PEF::Front::Config;
 use PEF::Front::Session;
-use Data::Dumper;
 
 sub _authorization_server {
 	die 'unimplemented base method';
