@@ -463,16 +463,18 @@ sub make_value_parser {
 			substr ($exp, 0,  1, '');
 			substr ($exp, -1, 1, '');
 		}
-		$ret = qq~do {
+		$ret = <<VP;
+		do {
 			my \$tmpl = '[% $exp %]';
 			my \$out;
 			\$tt->process_simple(\\\$tmpl, \$stash, \\\$out) 
 			or
 				cfg_log_level_error()
 				&& 
-				\$logger->({level => \"error\", message => 'error: $exp - ' . \$tt->error});\n
+				\$logger->({level => "error", message => 'error: $exp - ' . \$tt->error});\n
 			\$out;
-		}~;
+		}
+VP
 	}
 	return $ret;
 }
@@ -482,16 +484,26 @@ sub _make_cookie_parser {
 	$value = {value => $value} if not ref $value;
 	$name = _quote_var($name);
 	$value->{path} = '/' if not $value->{path};
-	my $ret = qq~\t\$http_response->set_cookie($name, {\n~;
+	my $ret = <<CP;
+	\$http_response->set_cookie($name, {
+CP
 	for my $pn (qw/value expires domain path secure max-age httponly/) {
 		if (exists $value->{$pn}) {
-			$ret .=
-			  "\t\t" . _quote_var($pn) . ' => ' . make_value_parser($value->{$pn}) . ",\n";
+			my $qvpn = _quote_var($pn);
+			my $pv   = make_value_parser($value->{$pn});
+			$ret .= <<CP;
+		$qvpn => $pv,
+CP
 		}
 	}
-	$ret .= "\t\t(\$defaults->{scheme} eq 'https'?(secure => 1): ()),\n"
-	  if not exists $value->{secure};
-	$ret .= qq~\t});\n~;
+	if (not exists $value->{secure}) {
+		$ret .= <<CP;
+		(\$defaults->{scheme} eq 'https'?(secure => 1): ()),
+CP
+	}
+	$ret .= <<CP;
+	});
+CP
 	return $ret;
 }
 
