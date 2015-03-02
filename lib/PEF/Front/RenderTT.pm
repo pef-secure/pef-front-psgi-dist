@@ -12,6 +12,7 @@ use PEF::Front::Cache;
 use PEF::Front::Validator;
 use PEF::Front::NLS;
 use PEF::Front::Response;
+use Sub::Name;
 
 sub handler {
 	my ($request, $defaults) = @_;
@@ -44,7 +45,7 @@ sub handler {
 	$defaults->{time}      = time;
 	$defaults->{gmtime}    = [gmtime];
 	$defaults->{localtime} = [localtime];
-	my $model = sub {
+	my $model = subname model => sub {
 		my %req;
 		my $method;
 		for (@_) {
@@ -123,108 +124,138 @@ sub handler {
 	$tt->define_vmethod('hash', model => $model);
 	$tt->define_vmethod(
 		'text',
-		config => sub {
-			my ($key) = @_;
-			PEF::Front::Config::cfg($key);
-		}
-	);
-	$tt->define_vmethod(
-		'text',
-		m => sub {
-			my ($msgid, @params) = @_;
-			msg_get($lang, $msgid, @params)->{message};
-		}
-	);
-	$tt->define_vmethod(
-		'text',
-		mn => sub {
-			my ($msgid, $num, @params) = @_;
-			msg_get_n($lang, $msgid, $num, @params)->{message};
-		}
-	);
-	$tt->define_vmethod(
-		'text',
-		ml => sub {
-			my ($msgid, $tlang, @params) = @_;
-			msg_get($tlang, $msgid, @params)->{message};
-		}
-	);
-	$tt->define_vmethod(
-		'text',
-		mnl => sub {
-			my ($msgid, $num, $tlang, @params) = @_;
-			msg_get_n($tlang, $msgid, $num, @params)->{message};
-		}
-	);
-	$tt->define_vmethod(
-		'text',
-		uri_unescape => sub {
-			uri_unescape(@_);
-		}
-	);
-	$tt->define_vmethod(
-		'text',
-		strftime => sub {
-			return if ref $_[1] ne 'ARRAY';
-			strftime($_[0], @{$_[1]});
-		}
-	);
-	$tt->define_vmethod(
-		'text',
-		gmtime => sub {
-			return [gmtime ($_[0])];
-		}
-	);
-	$tt->define_vmethod(
-		'text',
-		localtime => sub {
-			return [localtime ($_[0])];
-		}
-	);
-	$tt->define_vmethod(
-		'text',
-		response_content_type => sub {
-			$http_response->content_type($_[0]);
-			return;
-		}
-	);
-	$tt->define_vmethod(
-		'text',
-		request_get_header => sub {
-			return $request->headers->get_header($_[0]);
-		}
-	);
-	$tt->define_vmethod(
-		'text',
-		response_set_header => sub {
-			$http_response->set_header(@_);
-			return;
-		}
-	);
-	$tt->define_vmethod(
-		'text',
-		response_set_cookie => sub {
-			$http_response->set_cookie(@_);
-			return;
-		}
-	);
-	$tt->define_vmethod(
-		'text',
-		response_set_status => sub {
-			$http_response->status(@_);
-			return;
-		}
-	);
-	$tt->define_vmethod(
-		'text',
-		session => sub {
-			$defaults->{session} ||= PEF::Front::Session->new($request);
-			if(@_) {
-				return $defaults->{session}->data->{$_[0]};
-			} else {
-				return $defaults->{session}->data;
+		config => subname(
+			config => sub {
+				my ($key) = @_;
+				PEF::Front::Config::cfg($key);
 			}
-		}
+		)
+	);
+	$tt->define_vmethod(
+		'text',
+		m => subname(
+			m => sub {
+				my ($msgid, @params) = @_;
+				msg_get($lang, $msgid, @params)->{message};
+			}
+		)
+	);
+	$tt->define_vmethod(
+		'text',
+		mn => subname(
+			mn => sub {
+				my ($msgid, $num, @params) = @_;
+				msg_get_n($lang, $msgid, $num, @params)->{message};
+			}
+		)
+	);
+	$tt->define_vmethod(
+		'text',
+		ml => subname(
+			ml => sub {
+				my ($msgid, $tlang, @params) = @_;
+				msg_get($tlang, $msgid, @params)->{message};
+			}
+		)
+	);
+	$tt->define_vmethod(
+		'text',
+		mnl => subname(
+			mnl => sub {
+				my ($msgid, $num, $tlang, @params) = @_;
+				msg_get_n($tlang, $msgid, $num, @params)->{message};
+			}
+		)
+	);
+	$tt->define_vmethod(
+		'text',
+		uri_unescape => subname(
+			uri_unescape => sub {
+				uri_unescape(@_);
+			}
+		)
+	);
+	$tt->define_vmethod(
+		'text',
+		strftime => subname(
+			strftime => sub {
+				return if ref $_[1] ne 'ARRAY';
+				strftime($_[0], @{$_[1]});
+			}
+		  )
+	);
+	$tt->define_vmethod(
+		'text',
+		gmtime => subname(
+			gmtime => sub {
+				return [gmtime ($_[0])];
+			}
+		)
+	);
+	$tt->define_vmethod(
+		'text',
+		localtime => subname(
+			localtime => sub {
+				return [localtime ($_[0])];
+			}
+		)
+	);
+	$tt->define_vmethod(
+		'text',
+		response_content_type => (
+			subname response_content_type => sub {
+				$http_response->content_type($_[0]);
+				return;
+			}
+		)
+	);
+	$tt->define_vmethod(
+		'text',
+		request_get_header => subname(
+			request_get_header => sub {
+				return $request->headers->get_header($_[0]);
+			}
+		)
+	);
+	$tt->define_vmethod(
+		'text',
+		response_set_header => subname(
+			response_set_header => sub {
+				$http_response->set_header(@_);
+				return;
+			}
+		)
+	);
+	$tt->define_vmethod(
+		'text',
+		response_set_cookie => subname(
+			response_set_cookie => sub {
+				$http_response->set_cookie(@_);
+				return;
+			}
+		)
+	);
+	$tt->define_vmethod(
+		'text',
+		response_set_status => subname(
+			response_set_status => sub {
+				$http_response->status(@_);
+				return;
+			}
+		)
+	);
+	$tt->define_vmethod(
+		'text',
+		session => subname(
+			session => sub {
+				$defaults->{session} ||= PEF::Front::Session->new($request);
+				if (@_) {
+					return $defaults->{session}->data->{$_[0]};
+				} else {
+					return $defaults->{session}->data;
+				}
+			}
+		)
 	);
 	$http_response->content_type('text/html; charset=utf-8');
 	$http_response->set_body('');
