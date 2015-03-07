@@ -22,6 +22,11 @@ sub _token_request {
 	);
 }
 
+sub _decode_token {
+	my ($self, $content) = @_;
+	return {map { split ('=', $_) } split ('&', $content)};
+}
+
 sub _get_user_info_request {
 	my ($self) = @_;
 	my $req = GET 'https://graph.facebook.com/me';

@@ -12,6 +12,8 @@ sub _authorization_server {
 }
 
 sub _required_redirect_uri { 1 }
+sub _required_state        { 0 }
+sub _returns_state         { 0 }
 
 sub _token_request {
 	my ($self, $code) = @_;

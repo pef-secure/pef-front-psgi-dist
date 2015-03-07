@@ -1,4 +1,4 @@
-package PEF::Front::Oauth::Google;
+package PEF::Front::Oauth::Paypal;
 
 use strict;
 use warnings;
@@ -8,40 +8,39 @@ use feature 'state';
 use PEF::Front::Config;
 
 sub _authorization_server {
-	'https://accounts.google.com/o/oauth2/auth';
+	'https://www.paypal.com/webapps/auth/protocol/openidconnect/v1/authorize';
 }
 
 sub _required_redirect_uri { 1 }
 
 sub _token_request {
 	my ($self, $code) = @_;
-	POST 'https://accounts.google.com/o/oauth2/token',
+	my $req = POST 'https://api.paypal.com/v1/identity/openidconnect/tokenservice',
 	  [ redirect_uri => redirect_uri => $self->{session}->data->{oauth_redirect_uri}{$self->{service}},
 		grant_type   => 'authorization_code',
 		code         => $code,
-		client_id     => cfg_oauth_client_id($self->{service}),
-		client_secret => cfg_oauth_client_secret($self->{service})
 	  ];
-
+	$req->authorization_basic(cfg_oauth_client_id($self->{service}), cfg_oauth_client_secret($self->{service}));
+	$req;
 }
 
 sub _get_user_info_request {
 	my ($self) = @_;
-	my $req = GET 'https://www.googleapis.com/oauth2/v2/userinfo',
-	  Authorization => 'Bearer ' . $self->{session}->data->{oauth_access_token}{$self->{service}};
+	my $req = GET 'https://api.paypal.com/v1/identity/openidconnect/userinfo/?schema=openid';
+	$req->content_type('application/json');
+	$req->header(Authorization => 'Bearer ' . $self->{session}->data->{oauth_access_token}{$self->{service}});
+	$req->header(Accept        => 'application/json');
 	$req;
 }
 
 sub _parse_user_info {
 	my ($self) = @_;
-	my $info   = $self->{session}->data->{oauth_info_raw}{$self->{service}};
-	my @avatar = ();
-	@avatar = ({url => $info->{picture}}) if $info->{picture};
+	my $info = $self->{session}->data->{oauth_info_raw}{$self->{service}};
 	return {
 		name  => $info->{name}  || '',
 		email => $info->{email} || '',
 		login => $info->{email} || '',
-		avatar => \@avatar,
+		avatar => [],
 	};
 }
 

@@ -209,10 +209,40 @@ sub std_oauth_client_secret {
 sub std_oauth_scopes {
 	state $scopes = {
 		yandex     => {user_info => undef},
-		google     => {user_info => 'https://www.googleapis.com/auth/plus.login,email'},
-		facebook   => {user_info => 'public_profile,email'},
 		v_kontakte => {user_info => undef},
 		git_hub    => {user_info => 'user'},
+		google     => {
+			email     => 'https://www.googleapis.com/auth/userinfo.email',
+			share     => 'https://www.googleapis.com/auth/plus.stream.write',
+			user_info => 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile'
+		},
+		facebook => {
+			email     => 'email',
+			share     => 'publish_actions',
+			user_info => 'email',
+			offline   => 'offline_access'
+		},
+		v_kontakte => {user_info => undef},
+		git_hub    => {user_info => 'user'},
+		msn        => {
+			email     => 'wl.emails',
+			offline   => 'wl.offline_access',
+			share     => 'wl.share',
+			user_info => 'wl.basic wl.emails',
+		},
+		paypal => {
+			email     => 'email',
+			user_info => 'email profile phone address',
+			all       => 'email openid profile phone address'
+			  . 'https://uri.paypal.com/services/paypalattributes'
+			  . ' https://uri.paypal.com/services/expresscheckout',
+		},
+		linked_in => {
+			email     => 'r_emailaddress',
+			share     => 'rw_nus',
+			user_info => 'r_emailaddress r_fullprofile',
+		  }
+
 	};
 	$scopes->{$_[0]};
 }

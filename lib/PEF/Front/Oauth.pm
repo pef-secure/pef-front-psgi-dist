@@ -26,6 +26,12 @@ sub _parse_user_info {
 }
 
 sub _required_redirect_uri { 0 }
+sub _required_state        { 1 }
+sub _returns_state         { 1 }
+
+sub _decode_token {
+	decode_json($_[1]);
+}
 
 sub user_info_scope {
 	my ($self) = @_;
@@ -43,7 +49,7 @@ sub authorization_server {
 	}
 	if (defined $redirect_uri) {
 		my $uri = URI->new($redirect_uri);
-		$uri->query_form($uri->query_form, state => $self->{state});
+		$uri->query_form($uri->query_form, state => $self->{state}) unless $self->_returns_state;
 		push @extra, (redirect_uri => $uri->as_string);
 		$self->{session}->data->{oauth_redirect_uri}{$self->{service}} = $uri->as_string;
 	} elsif ($self->_required_redirect_uri) {
@@ -52,9 +58,8 @@ sub authorization_server {
 			answer      => 'Oauth $1 requires redirect_uri',
 			answer_args => [$self->{service}]
 		};
-	} else {
-		push @extra, (state => $self->{state});
 	}
+	push @extra, (state => $self->{state}) if $self->_required_state;
 	$uri->query_form(
 		response_type => 'code',
 		client_id     => cfg_oauth_client_id($self->{service}),
@@ -72,10 +77,10 @@ sub exchange_code_to_token {
 		eval {
 			local $SIG{ALRM} = sub { die "timeout" };
 			alarm cfg_oauth_connect_timeout();
-			my $request = $self->_token_request($request->{code});
+			my $request  = $self->_token_request($request->{code});
 			my $response = LWP::UserAgent->new->request($request);
 			die if !$response or !$response->decoded_content;
-			$token_answer = decode_json $response->decoded_content;
+			$token_answer = $self->_decode_token($response->decoded_content);
 		};
 		my $exception = $@;
 		delete $self->{session}->data->{oauth_redirect_uri}{$self->{service}};
