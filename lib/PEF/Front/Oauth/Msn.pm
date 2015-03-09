@@ -16,7 +16,7 @@ sub _required_redirect_uri { 1 }
 sub _token_request {
 	my ($self, $code) = @_;
 	my $req = POST 'https://oauth.live.com/token',
-	  [ redirect_uri => redirect_uri => $self->{session}->data->{oauth_redirect_uri}{$self->{service}},
+	  [ redirect_uri  => $self->{session}->data->{oauth_redirect_uri}{$self->{service}},
 		client_id     => cfg_oauth_client_id($self->{service}),
 		client_secret => cfg_oauth_client_secret($self->{service}),
 		grant_type    => 'authorization_code',

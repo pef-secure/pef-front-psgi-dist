@@ -16,9 +16,9 @@ sub _required_redirect_uri { 1 }
 sub _token_request {
 	my ($self, $code) = @_;
 	POST 'https://accounts.google.com/o/oauth2/token',
-	  [ redirect_uri => redirect_uri => $self->{session}->data->{oauth_redirect_uri}{$self->{service}},
-		grant_type   => 'authorization_code',
-		code         => $code,
+	  [ redirect_uri  => $self->{session}->data->{oauth_redirect_uri}{$self->{service}},
+		grant_type    => 'authorization_code',
+		code          => $code,
 		client_id     => cfg_oauth_client_id($self->{service}),
 		client_secret => cfg_oauth_client_secret($self->{service})
 	  ];

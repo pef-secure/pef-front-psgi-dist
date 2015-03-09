@@ -16,7 +16,7 @@ sub _required_redirect_uri { 1 }
 sub _token_request {
 	my ($self, $code) = @_;
 	my $req = POST 'https://api.paypal.com/v1/identity/openidconnect/tokenservice',
-	  [ redirect_uri => redirect_uri => $self->{session}->data->{oauth_redirect_uri}{$self->{service}},
+	  [ redirect_uri => $self->{session}->data->{oauth_redirect_uri}{$self->{service}},
 		grant_type   => 'authorization_code',
 		code         => $code,
 	  ];
