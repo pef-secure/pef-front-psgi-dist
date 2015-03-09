@@ -165,7 +165,7 @@ sub prepare_defaults {
 		my @params = split /\//, $params;
 		my $i = 1;
 		for my $pv (@params) {
-			my ($p, $v) = map { tr/+/ /; decode_utf8 $_} split /-/, uri_unescape($pv), 2;
+			my ($p, $v) = split /-/, $pv, 2;
 			if (!defined ($v)) {
 				$v = $p;
 				$p = 'cookie';
