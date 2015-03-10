@@ -132,7 +132,7 @@ sub rewrite_route {
 			  if $http_response
 			  && blessed($http_response)
 			  && $http_response->isa('PEF::Front::Response');
-			$request->path($npi);
+			$request->path($npi) if defined $npi;
 			last if %$rewrite_flags and exists $rewrite_flags->{L};
 		}
 	}
