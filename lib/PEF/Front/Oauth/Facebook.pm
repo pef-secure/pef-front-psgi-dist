@@ -15,11 +15,13 @@ sub _token_request {
 	my ($self, $code) = @_;
 	my $req = GET 'https://graph.facebook.com/oauth/access_token';
 	$req->uri->query_form(
-		client_id         => cfg_oauth_client_id($self->{service}),
-		client_secret     => cfg_oauth_client_secret($self->{service}),
-		grant_type        => 'fb_exchange_token',
-		fb_exchange_token => $code
+		redirect_uri  => $self->{session}->data->{oauth_redirect_uri}{$self->{service}},
+		client_id     => cfg_oauth_client_id($self->{service}),
+		client_secret => cfg_oauth_client_secret($self->{service}),
+		grant_type    => 'authorization_code',
+		code          => $code
 	);
+	$req;
 }
 
 sub _decode_token {
