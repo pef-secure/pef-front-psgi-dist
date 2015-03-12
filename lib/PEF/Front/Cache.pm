@@ -24,7 +24,7 @@ BEGIN {
 			cache_size     => cfg_cache_size,
 			empty_on_exit  => 0,
 			unlink_on_exit => 0,
-			expire_time    => cfg_cache_global_expire,
+			expire_time    => 0,
 			init_file      => 1
 		) or die "Can't create cache: $!";
 	}
