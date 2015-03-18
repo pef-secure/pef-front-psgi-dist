@@ -9,6 +9,7 @@ use Carp qw(cluck croak);
 use Regexp::Common 'RE_ALL';
 use PEF::Front::Captcha;
 use PEF::Front::Config;
+use Sub::Name;
 use base 'Exporter';
 our @EXPORT = qw{
   validate
@@ -692,7 +693,8 @@ sub load_validation_rules {
 		$new_rules->{method} = $method;
 		my $validator_sub = _build_validator($new_rules);
 		$model_cache{$method}{code_text} = $validator_sub;
-		eval "\$model_cache{\$method}{code} = $validator_sub";
+		my $vsubname = "validate$mrf";
+		eval "\$model_cache{\$method}{code} = subname $vsubname => $validator_sub";
 		croak {
 			result        => 'INTERR',
 			answer        => 'Validator $1 error: $2',
