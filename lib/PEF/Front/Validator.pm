@@ -721,8 +721,8 @@ sub load_validation_rules {
 		}
 		$model_cache{$method}{model} = $model;
 		if (exists $new_rules->{result}) {
-			$model_cache{$method}{result_sub} =
-			  _build_result_processor($new_rules->{result} || {});
+			my $rsubname = "result$mrf";
+			$model_cache{$method}{result_sub} = subname $rsubname => _build_result_processor($new_rules->{result} || {});
 		}
 		$model_cache{$method}{modified} = $stats[9];
 	}
