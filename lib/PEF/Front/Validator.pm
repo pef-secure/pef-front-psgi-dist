@@ -128,8 +128,8 @@ ATTR
 			if($jsn {$pr} ne 'nocheck') {
 				croak {
 					result => 'BADPARAM', 
-					answer => 'Bad parameter \$1: bad captcha', 
-					answer_args => ['$pr']
+					answer => 'Bad captcha: \$1', 
+					answer_args => [$jsn {$pr}]
 				} unless PEF::Front::Captcha::check_captcha($jsn {$pr}, $jsn {$mr->{captcha}});
 			}
 ATTR
