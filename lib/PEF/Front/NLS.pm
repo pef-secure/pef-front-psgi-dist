@@ -5,6 +5,11 @@ use PEF::Front::Config;
 use PEF::Front::Connector;
 use Geo::IPfree;
 use JSON;
+use Storable;
+use MLDBM::Sync;
+use MLDBM qw(MLDBM::Sync::SDBM_File Storable);
+use Fcntl qw(:DEFAULT :flock);
+
 use base 'Exporter';
 
 our @EXPORT = qw{
@@ -65,11 +70,14 @@ sub msg_get {
 		}
 	};
 	if (not $ret->{found}) {
+		if (cfg_collect_unknown_msgid and not defined $ret->{id_nls_msgid}) {
+			tie (my %dbm, 'MLDBM::Sync', cfg_unknown_msgid_db, O_CREAT | O_RDWR, 0666) or warn "$!";
+			$dbm{$msgid} = 'singular';
+		}
 		if (not cfg_no_multilang_support and defined $ret->{id_nls_msgid}) {
 			my ($alt_lang) = db_connect->run(
 				sub {
-					$_->selectrow_array(q{select alternative from nls_lang where short = ?},
-						undef, $lang);
+					$_->selectrow_array(q{select alternative from nls_lang where short = ?}, undef, $lang);
 				}
 			);
 			$alt_lang ||= cfg_default_lang;
@@ -103,8 +111,7 @@ sub msg_get_n {
 		if (not exists $plurals_sub{$selected_lang}) {
 			my $plural_forms = db_connect->run(
 				sub {
-					$_->selectrow_array(q{select plural_forms from nls_lang where short = ?},
-						undef, $selected_lang);
+					$_->selectrow_array(q{select plural_forms from nls_lang where short = ?}, undef, $selected_lang);
 				}
 			);
 			my $sub = eval "sub {my \$n = \$_[0]; 0 + ($plural_forms)}";
@@ -126,11 +133,14 @@ sub msg_get_n {
 		}
 	};
 	if (not $ret->{found}) {
+		if (cfg_collect_unknown_msgid and not defined $ret->{id_nls_msgid}) {
+			tie (my %dbm, 'MLDBM::Sync', cfg_unknown_msgid_db, O_CREAT | O_RDWR, 0666) or warn "$!";
+			$dbm{$msgid} = 'plural';
+		}
 		if (not cfg_no_multilang_support and defined $ret->{id_nls_msgid}) {
 			my ($alt_lang) = db_connect->run(
 				sub {
-					$_->selectrow_array(q{select alternative from nls_lang where short = ?},
-						undef, $lang);
+					$_->selectrow_array(q{select alternative from nls_lang where short = ?}, undef, $lang);
 				}
 			);
 			$alt_lang ||= cfg_default_lang;
@@ -160,8 +170,7 @@ sub check_avail_lang {
 	my $lang = $_[0];
 	my ($avail) = db_connect->run(
 		sub {
-			$_->selectrow_array(q{select short from nls_lang where short = ? and is_active},
-				undef, $lang);
+			$_->selectrow_array(q{select short from nls_lang where short = ? and is_active}, undef, $lang);
 		}
 	);
 	defined $avail;
@@ -212,8 +221,7 @@ sub guess_lang {
 			my $country = lc (($gi->LookUp($request->remote_ip))[0]);
 			($lang) = db_connect->run(
 				sub {
-					$_->selectrow_array(q{select short from geo_language where country = ?},
-						undef, $country);
+					$_->selectrow_array(q{select short from geo_language where country = ?}, undef, $country);
 				}
 			);
 			$lang = cfg_default_lang if not check_avail_lang $lang;

@@ -61,6 +61,8 @@ my @std_const_params = qw{
   cfg_session_ttl
   cfg_session_request_field
   cfg_oauth_connect_timeout
+  cfg_unknown_msgid_db
+  cfg_collect_unknown_msgid
 };
 
 my @std_var_params = qw{
@@ -114,6 +116,8 @@ sub import {
 
 sub std_project_dir                  { $project_dir }
 sub std_no_nls                       { 0 }
+sub std_unknown_msgid_db             { cfg_project_dir() . "/var/cache/unknown-msgid.db" }
+sub std_collect_unknown_msgid        { 0 }
 sub std_model_rpc_admin_port         { 5500 }
 sub std_model_rpc_site_port          { 4500 }
 sub std_model_rpc_admin_addr         { '172.16.0.1' }
