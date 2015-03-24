@@ -150,7 +150,7 @@ ATTR
 			<<ATTR;
 			croak {
 				result => 'BADPARAM', 
-				answer => 'Parameter \$1 is too big', 
+				answer => 'Parameter \$1 is too long', 
 				answer_args => ['$pr']
 			} if (
 				!ref($jsn {$pr})
@@ -166,7 +166,7 @@ ATTR
 			<<ATTR;
 			croak {
 				result => 'BADPARAM', 
-				answer => 'Parameter \$1 is too small', 
+				answer => 'Parameter \$1 is too short', 
 				answer_args => ['$pr']
 			} if (
 				!ref($jsn {$pr})
@@ -222,6 +222,26 @@ ATTR
 					answer_args => ['$pr']
 				} unless \$found;
 			}
+ATTR
+		},
+		'max' => sub {
+			return '' if !defined ($mr->{'max'}) || $mr->{'max'} eq '';
+			<<ATTR;
+			croak {
+				result => 'BADPARAM', 
+				answer => 'Parameter \$1 is too big', 
+				answer_args => ['$pr']
+			} if $jsn {$pr} >  $mr->{'max'};
+ATTR
+		},
+		'min' => sub {
+			return '' if !defined ($mr->{'min'}) || $mr->{'min'} eq '';
+			<<ATTR;
+			croak {
+				result => 'BADPARAM', 
+				answer => 'Parameter \$1 is too small', 
+				answer_args => ['$pr']
+			} if $jsn {$pr} < $mr->{'min'};
 ATTR
 		},
 		default => sub {
