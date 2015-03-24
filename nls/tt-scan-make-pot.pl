@@ -73,8 +73,8 @@ if ($unknown_msgid_db) {
 	$sync_obj->Lock;
 	for my $msgid (keys %dbm) {
 		if (not exists $msgids{$msgid}) {
-			$msgids{$msgid}{source} = 'unknown';
-			$msgids{$msgid}{form}   = $dbm{$msgid};
+			$msgids{$msgid}{source}{unknown} = undef;
+			$msgids{$msgid}{form} = $dbm{$msgid};
 		}
 	}
 	$sync_obj->UnLock;
