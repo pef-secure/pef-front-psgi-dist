@@ -74,7 +74,11 @@ $language = $header_lines{Language}
 db_connect;
 my $nls_lang = $conn->run(
 	sub {
-		$_->selectrow_hashref('select * from nls_lang where name = ?', undef, $language);
+		if ($language =~ /^[a-z]{2}$/) {
+			$_->selectrow_hashref('select * from nls_lang where short = ?', undef, $language);
+		} else {
+			$_->selectrow_hashref('select * from nls_lang where name = ?', undef, $language);
+		}
 	}
 ) or die "unknown nls_lang";
 
