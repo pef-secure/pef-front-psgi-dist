@@ -77,17 +77,16 @@ sub get_cookie {
 
 sub set_body {
 	my ($self, $body) = @_;
-	$self->{body} = [$body];
-}
-
-sub set_body_handle {
-	my ($self, $bh) = @_;
-	$self->{body} = $bh;
+	$self->{body} = ref ($body) ? $body : [$body];
 }
 
 sub add_body {
 	my ($self, $body) = @_;
-	push @{$self->{body}}, $body;
+	if (ref ($self->{body}) eq 'ARRAY') {
+		push @{$self->{body}}, $body;
+	} else {
+		$self->set_body($body);
+	}
 }
 
 sub get_body { $_[0]->{body} }
@@ -146,8 +145,7 @@ sub make_headers {
 		$value = {value => $value} unless ref ($value) eq 'HASH';
 		no utf8;
 		my @cookie =
-		  (     URI::Escape::uri_escape($name) . "="
-			  . URI::Escape::uri_escape(safe_encode_utf8($value->{value})));
+		  (URI::Escape::uri_escape($name) . "=" . URI::Escape::uri_escape(safe_encode_utf8($value->{value})));
 		push @cookie, "domain=" . $value->{domain}            if $value->{domain};
 		push @cookie, "path=" . $value->{path}                if $value->{path};
 		push @cookie, "expires=" . expires($value->{expires}) if $value->{expires};
