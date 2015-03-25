@@ -219,11 +219,13 @@ sub www_static_handler {
 	}
 	my $sfn = cfg_www_static_dir . $request->path;
 	if ($valid && -e $sfn && -r $sfn && -f $sfn) {
+		use feature 'state';
+		state $file_magic = File::LibMagic->new;
 		$http_response->status(200);
-		$http_response->set_header('content-type',   File::LibMagic->new->checktype_filename($sfn));
+		$http_response->set_header('content-type',   $file_magic->checktype_filename($sfn));
 		$http_response->set_header('content-length', -s $sfn);
 		open my $bh, "<", $sfn;
-		$http_response->set_body_handle($bh);
+		$http_response->set_body($bh);
 	}
 }
 
