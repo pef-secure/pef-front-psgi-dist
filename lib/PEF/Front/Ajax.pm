@@ -204,7 +204,17 @@ sub handler {
 	my ($request, $defaults) = @_;
 	return sub {
 		my $responder = $_[0];
-		$responder->(ajax($request, $defaults));
+		my $response = ajax($request, $defaults);
+		if (ref ($response->[2]) eq 'CODE') {
+			my $coderef = pop @$response;
+			my $writer  = $responder->($response);
+			while (my ($stream) = $coderef->($request, $defaults)) {
+				$writer->write($stream);
+			}
+			$writer->close;
+		} else {
+			$responder->($response);
+		}
 	};
 }
 
