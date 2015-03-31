@@ -167,6 +167,7 @@ sub msg_get_n {
 my $gi = Geo::IPfree->new;
 
 sub check_avail_lang {
+	return if cfg_no_multilang_support;
 	my $lang = $_[0];
 	my ($avail) = db_connect->run(
 		sub {
