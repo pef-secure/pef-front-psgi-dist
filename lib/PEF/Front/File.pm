@@ -28,7 +28,7 @@ sub new {
 		size         => (delete $args{size}) || -1,
 		filename     => $fname,
 	}, $class;
-	open (my $fh, ">", "$self->{upload_path}/$self->{filename}")
+	open (my $fh, "+>", "$self->{upload_path}/$self->{filename}")
 	  or die {
 		result => 'INTERR',
 		answer => "Misconfigured upload directory: $!"
