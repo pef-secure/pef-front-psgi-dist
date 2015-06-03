@@ -211,7 +211,7 @@ sub guess_lang {
 			my %alset;
 			for my $tl (@al) {
 				next if exists $alset{$tl};
-				$alset{$tl->{short}} = undef;
+				$alset{$tl} = undef;
 				if (check_avail_lang $tl) {
 					$lang = $tl;
 					last;
