@@ -222,7 +222,7 @@ sub guess_lang {
 			my $country = lc (($gi->LookUp($request->remote_ip))[0]);
 			($lang) = db_connect->run(
 				sub {
-					$_->selectrow_array(q{select short from geo_language where country = ?}, undef, $country);
+					$_->selectrow_array(q{select short from nls_geo where country = ?}, undef, $country);
 				}
 			);
 			$lang = cfg_default_lang if not check_avail_lang $lang;
