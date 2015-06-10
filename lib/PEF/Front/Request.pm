@@ -197,7 +197,7 @@ sub _parse_request_body {
 			$from_json =~ tr/+/ /;
 			$from_json =~ s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg;
 		}
-		$self->{body_params} = eval { decode_json $from_json} || {};
+		$self->{body_params} = eval { $from_json && decode_json $from_json } || {};
 		return $self->{body_params};
 	} elsif (index ($ct, 'application/xml') == 0) {
 		$read_body_sub->();
