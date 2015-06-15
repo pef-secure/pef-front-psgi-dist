@@ -260,7 +260,7 @@ sub _parse_multipart_form {
 					($file) = ($file =~ /([^\/\\]*)$/);
 					$file =~ s/^\s*//;
 					$file =~ s/\s*$//;
-					$file =~ s/^\w+://;
+					$file =~ s/^[\w:]+//;
 					$file ||= "unnamed_upload";
 					$current_field = decode_utf8($name);
 					$form->{$current_field} = PEF::Front::File->new(
