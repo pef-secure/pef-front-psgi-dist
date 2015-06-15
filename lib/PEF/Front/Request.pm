@@ -260,7 +260,7 @@ sub _parse_multipart_form {
 					($file) = ($file =~ /([^\/\\]*)$/);
 					$file =~ s/^\s*//;
 					$file =~ s/\s*$//;
-					$file =~ s/^[\w:]+//;
+					$file =~ s/^(\w+:+)+//;
 					if ($file eq '' || substr ($file, 0, 1) eq '.') {
 						$file = "unnamed_upload" . $file;
 					}
