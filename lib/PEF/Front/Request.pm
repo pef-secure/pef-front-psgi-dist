@@ -257,7 +257,11 @@ sub _parse_multipart_form {
 				my ($type) = ($header =~ /Content-Type:\s*(\S+)/);
 				$name ||= '';
 				if (defined ($file) && $file ne '') {
-					($file) = ($file =~ /([^\/\\:]*)$/);
+					($file) = ($file =~ /([^\/\\]*)$/);
+					$file =~ s/^\s*//;
+					$file =~ s/\s*$//;
+					$file =~ s/^\w+://;
+					$file ||= "unnamed_upload";
 					$current_field = decode_utf8($name);
 					$form->{$current_field} = PEF::Front::File->new(
 						filename => decode_utf8($file),
