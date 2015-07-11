@@ -5,18 +5,21 @@ use Cache::FastMmap;
 use PEF::Front::Config;
 use Time::Duration::Parse;
 use Time::HiRes 'time';
+use Data::Dumper;
 
 use base 'Exporter';
 our @EXPORT = qw{
   get_cache
+  make_request_cache_key
   remove_cache_key
   set_cache
 };
 
 my $cache;
+my $dumper;
 
 BEGIN {
-	# empty grep means there's no config loaded - some statical 
+	# empty grep means there's no config loaded - some statical
 	# analyzing tools can break
 	if (grep { /AppFrontConfig\.pm$/ } keys %INC) {
 		$cache = Cache::FastMmap->new(
@@ -28,6 +31,13 @@ BEGIN {
 			init_file      => 1
 		) or die "Can't create cache: $!";
 	}
+	$dumper = Data::Dumper->new([]);
+	$dumper->Indent(0);
+	$dumper->Pair(":");
+	$dumper->Useqq(1);
+	$dumper->Terse(1);
+	$dumper->Deepcopy(1);
+	$dumper->Sortkeys(1);
 }
 
 sub get_cache {
@@ -53,6 +63,21 @@ sub set_cache {
 sub remove_cache_key {
 	my $key = $_[0];
 	$cache->remove($key);
+}
+
+sub make_request_cache_key {
+	my ($vreq, $cache_attr) = @_;
+	$cache_attr = {key => 'method', expires => $cache_attr} if not ref $cache_attr;
+	my @keys;
+	if (ref ($cache_attr->{key}) eq 'ARRAY') {
+		@keys = grep { exists $vreq->{$_} } @{$cache_attr->{key}};
+	} elsif (not exists $cache_attr->{key}) {
+		@keys = ('method');
+	} else {
+		@keys = ($cache_attr->{key});
+	}
+	$dumper->Values([{map { $_ => $vreq->{$_} } @keys}]);
+	return $dumper->Dump;
 }
 
 1;

@@ -76,20 +76,9 @@ sub handler {
 			my $cache_attr = get_method_attrs($vreq => 'cache');
 			my $cache_key;
 			if ($cache_attr) {
-				$cache_attr = {key => 'method', expires => $cache_attr} if not ref $cache_attr;
-				my @keys;
-				if (ref ($cache_attr->{key}) eq 'ARRAY') {
-					@keys = grep { exists $vreq->{$_} } @{$cache_attr->{key}};
-				} elsif (not exists $cache_attr->{key}) {
-					@keys = ('method');
-				} else {
-					@keys = ($cache_attr->{key});
-				}
-				$cache_attr->{expires} = cfg_cache_method_expire
-				  unless exists $cache_attr->{expires};
-				$cache_key = join (":", @{$vreq}{@keys});
-				cfg_log_level_debug
-				  && $logger->({level => "debug", message => "cache key: $cache_key"});
+				$cache_key = make_request_cache_key($vreq, $cache_attr);
+				$cache_attr->{expires} = cfg_cache_method_expire unless exists $cache_attr->{expires};
+				cfg_log_level_debug && $logger->({level => "debug", message => "cache key: $cache_key"});
 				$response = get_cache("ajax:$cache_key");
 			}
 			if (not $response) {
@@ -182,7 +171,7 @@ sub handler {
 				return if ref $_[1] ne 'ARRAY';
 				strftime($_[0], @{$_[1]});
 			}
-		  )
+		)
 	);
 	$tt->define_vmethod(
 		'text',
