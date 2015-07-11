@@ -7,7 +7,6 @@ use Encode;
 use utf8;
 use URI::Escape;
 use URI;
-use POSIX 'strftime';
 use PEF::Front::Headers;
 
 sub new {
@@ -121,9 +120,14 @@ sub content_type {
 	return $self->get_header('Content-Type') if defined wantarray;
 }
 
+my @dow = qw(Sun Mon Tue Wed Thu Fri Sat);
+my @mon = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
+
 sub expires {
 	my $expires = eval { parse_duration($_[0]) } || 0;
-	return strftime("%a, %d-%b-%Y %H:%M:%S GMT", gmtime (time + $expires));
+	my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = gmtime (time + $expires);
+	sprintf "%s, %02d-%s-%04d %02d:%02d:%02d GMT", $dow[$wday], $mday, $mon[$mon], 1900 + $year, $hour, $min,
+	  $sec;
 }
 
 sub safe_encode_utf8 {
