@@ -169,6 +169,11 @@ sub ajax {
 			cfg_log_level_debug
 			  && $logger->({level => "debug", message => "outputting the answer"});
 			my $ct = 'text/html; charset=utf-8';
+			if ($response->{answer} and exists $response->{answer_args} and not exists $response->{answer_no_nls}) {
+				my $args = $response->{answer_args};
+				$args = [$response->{answer_args}] if 'ARRAY' ne ref $args;
+				$response->{answer} = msg_get($lang, $response->{answer}, @$args)->{message};
+			}
 			if (   exists ($response->{answer_content_type})
 				&& defined ($response->{answer_content_type})
 				&& $response->{answer_content_type})
