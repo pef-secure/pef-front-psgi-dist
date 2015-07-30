@@ -87,7 +87,7 @@ sub handler {
 				  && $logger->({level => "debug", message => "model: $model"});
 				if (index ($model, "::") >= 0) {
 					my $class = substr ($model, 0, rindex ($model, "::"));
-					eval "use $class;\n\$response = $model(\$vreq)";
+					eval "use $class;\n\$response = $model(\$vreq, \$defaults)";
 				} else {
 					$response = cfg_model_rpc($model)->send_message($vreq)->recv_message;
 				}
