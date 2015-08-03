@@ -162,7 +162,7 @@ ATTR
 ATTR
 		},
 		'min-size' => sub {
-			return '' if !defined ($mr->{'max-size'}) || $mr->{'max-size'} eq '';
+			return '' if !defined ($mr->{'min-size'}) || $mr->{'min-size'} eq '';
 			<<ATTR;
 			croak {
 				result => 'BADPARAM', 
