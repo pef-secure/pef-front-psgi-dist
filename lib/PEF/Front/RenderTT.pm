@@ -210,7 +210,8 @@ sub handler {
 		'text',
 		response_set_header => subname(
 			response_set_header => sub {
-				$http_response->set_header(@_);
+				my @p = ref ($_[0]) eq 'HASH' ? %{$_[0]} : @_;
+				$http_response->set_header(@p);
 				return;
 			}
 		)
@@ -219,7 +220,8 @@ sub handler {
 		'text',
 		response_set_cookie => subname(
 			response_set_cookie => sub {
-				$http_response->set_cookie(@_);
+				my @p = ref ($_[0]) eq 'HASH' ? %{$_[0]} : @_;
+				$http_response->set_cookie(@p);
 				return;
 			}
 		)
@@ -228,7 +230,7 @@ sub handler {
 		'text',
 		response_set_status => subname(
 			response_set_status => sub {
-				$http_response->status(@_);
+				$http_response->status($_[0]);
 				return;
 			}
 		)
