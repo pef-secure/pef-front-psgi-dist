@@ -20,6 +20,7 @@ BEGIN {
 		$cfg_captcha_db              = cfg_captcha_db();
 		$cfg_www_static_captchas_dir = cfg_www_static_captchas_dir();
 		$cfg_captcha_image_class     = cfg_captcha_image_class();
+		no strict 'refs';
 		for ($cfg_captcha_db, $cfg_www_static_captchas_dir) {
 			die "$_ must be directory "         unless -d $_;
 			die "directory $_ must be writable" unless -w $_;
