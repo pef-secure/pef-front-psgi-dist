@@ -65,7 +65,7 @@ sub make_captcha {
 	my $image_init = cfg_captcha_image_init();
 	$image_init = {} if not $image_init or 'HASH' ne ref $image_init;
 	no strict 'refs';
-	&{"${cfg_captcha_image_class}::generate_image"}->(
+	&{"${cfg_captcha_image_class}::generate_image"}(
 		width      => $req->{width},
 		height     => $req->{height},
 		size       => $req->{size},
