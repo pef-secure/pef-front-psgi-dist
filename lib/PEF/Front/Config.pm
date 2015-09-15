@@ -24,7 +24,11 @@ my @std_const_params = qw{
   cfg_upload_dir
   cfg_captcha_db
   cfg_captcha_font
+  cfg_captcha_image_init
+  cfg_captcha_image_class
   cfg_captcha_secret
+  cfg_captcha_symbols
+  cfg_captcha_expire_sec
   cfg_model_dir
   cfg_cache_file
   cfg_cache_size
@@ -137,7 +141,10 @@ sub std_out_filter_dir               { "$app_conf_dir/OutFilter" }
 sub std_upload_dir                   { cfg_project_dir() . "/var/upload" }
 sub std_captcha_db                   { cfg_project_dir() . "/var/captcha-db" }
 sub std_captcha_font                 { "giant" }
+sub std_captcha_image_init           { {} }
+sub std_captcha_image_class          { "PEF::Front::SecureCaptcha" }
 sub std_captcha_secret               { "very secret" }
+sub std_captcha_expire_sec           { 300 }
 sub std_cache_file                   { cfg_project_dir() . "/var/cache/shared.cache" }
 sub std_cache_size                   { "8m" }
 sub std_cache_method_expire          { 60 }
@@ -155,6 +162,11 @@ sub std_session_ttl                  { 86400 * 30 }
 sub std_session_request_field        { 'auth' }
 sub std_cookie_unset_negative_expire { -3600 }
 sub std_oauth_connect_timeout        { 15 }
+
+sub std_captcha_symbols {
+	state $symbols = ["0" .. "9", split //, "abCdEFgHiJKLMNOPqRSTUVWXyZ"];
+	$symbols;
+}
 
 sub std_www_static_captchas_path {
 	if (substr (cfg_www_static_captchas_dir(), 0, length (cfg_www_static_dir())) eq cfg_www_static_dir()) {
