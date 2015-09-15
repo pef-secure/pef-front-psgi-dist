@@ -11,12 +11,15 @@ use MLDBM::Sync;
 use MLDBM qw(MLDBM::Sync::SDBM_File Storable);
 use Fcntl qw(:DEFAULT :flock);
 
-our $cfg_captcha_db              = cfg_captcha_db();
-our $cfg_www_static_captchas_dir = cfg_www_static_captchas_dir();
-our $cfg_captcha_image_class     = cfg_captcha_image_class();
+our $cfg_captcha_db;
+our $cfg_www_static_captchas_dir;
+our $cfg_captcha_image_class;
 
 BEGIN {
 	if (grep { /AppFrontConfig\.pm$/ } keys %INC) {
+		$cfg_captcha_db              = cfg_captcha_db();
+		$cfg_www_static_captchas_dir = cfg_www_static_captchas_dir();
+		$cfg_captcha_image_class     = cfg_captcha_image_class();
 		for ($cfg_captcha_db, $cfg_www_static_captchas_dir) {
 			die "$_ must be directory "         unless -d $_;
 			die "directory $_ must be writable" unless -w $_;
