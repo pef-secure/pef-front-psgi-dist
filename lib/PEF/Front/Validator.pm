@@ -417,14 +417,14 @@ $sub_test
 ATTR
 		} else {
 			$must_params{$pr} = undef;
-			$validator_test .= $sub_test;
-			$validator_test .= <<ATTR
+			$validator_test .= <<ATTR;
 		    croak {
 		    	result => 'BADPARAM', 
 		    	answer => 'Mandatory parameter \$1 is absent', 
 		    	answer_args => ['$pr']
 		    } unless exists $jsn {$pr} ;
 ATTR
+			$validator_test .= $sub_test;
 		}
 		push @validator_checks, $validator_test;
 	}
