@@ -50,6 +50,7 @@ sub _parse {
 	my $self = $_[0];
 	$self->_parse_query_params;
 	$self->_parse_request_body if $self->method eq 'POST';
+
 }
 
 sub params {
@@ -58,6 +59,12 @@ sub params {
 	my $q = $self->{query_params} || {};
 	my $p = $self->{body_params}  || {};
 	$self->{params} = {%$q, %$p};
+	if (exists $self->{params}{json}) {
+		my $form = eval { from_json $self->{params}{json} } || {};
+		$self->logger({level => "warn", message => $@}) if $@;
+		$self->{params} = {%{$self->{params}}, %$form};
+	}
+	$self->{params};
 }
 
 sub path {
@@ -205,10 +212,6 @@ sub _parse_request_body {
 		return $self->{body_params};
 	} elsif (index ($ct, 'multipart/form-data') == 0) {
 		$self->_parse_multipart_form;
-	}
-	if (exists $self->{body_params}{json}) {
-		my $form = eval { from_json $self->{body_params}{json} } || {};
-		$self->{body_params} = {%{$self->{body_params}}, %$form};
 	}
 	return $self->{body_params};
 }
