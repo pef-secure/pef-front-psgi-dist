@@ -102,7 +102,6 @@ sub check_code {
 
 sub check_captcha {
 	my ($input, $md5sum) = @_;
-	my $captcha = PEF::Front::SecureCaptcha->new();
 	return check_code($input, $md5sum) == 1;
 }
 
