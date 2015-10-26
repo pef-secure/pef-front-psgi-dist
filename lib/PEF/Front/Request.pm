@@ -58,7 +58,7 @@ sub params {
 	return $self->{params} if exists $self->{params};
 	my $q = $self->{query_params} || {};
 	my $p = $self->{body_params}  || {};
-	$self->{params} = {%$q, %$p};
+	$self->{params} = {%$p, %$q};
 	if (exists $self->{params}{json}) {
 		my $form = eval { from_json $self->{params}{json} } || {};
 		$self->logger({level => "warn", message => $@}) if $@;
